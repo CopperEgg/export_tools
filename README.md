@@ -5,6 +5,7 @@ Ruby scripts for extracting your CopperEgg data to CSV files.
 
 ###Synopsis
 Four utilities are provided:
+
   - probeinfo_csvexport.rb.....all probe information (definition and configuration) for all of your monitored RevealUptime probes is retrieved and exported to CSV.
 
   - sysinfo_csvexport.rb.......all system information (definition and configuration) for all of your monitored RevealCloud systems is retrieved and exported to CSV.
@@ -28,7 +29,7 @@ All development and testing to date has been done with ruby-1.9.3-p194 and Typho
 ###Clone this repository.
 
 ```ruby
-git clone http://git@github.com:sjohnsoncopperegg/fsdata_export.git
+git clone http://git@github.com:sjohnsoncopperegg/export_tools.git
 ```
 
 ###Run the Bundler
@@ -40,7 +41,7 @@ bundle install
 ## Usage
 
 ```ruby
-ruby fsdata_extract.rb APIKEY [options]
+ruby sysinfo_csvexport.rb APIKEY [options]
 ```
 Substitute APIKEY with your CopperEgg User API key. Find it as follows:
 Settings tab -> Personal Settings -> User API Access
@@ -48,32 +49,33 @@ Settings tab -> Personal Settings -> User API Access
 Your command line will appear as follows:
 
 ```ruby
-ruby fsdata_extract.rb '1234567890123456'
+ruby sysinfo_csvexport.rb '1234567890123456'
 ```
 
 ## Defaults and Options
 
 The available options can be found by typing in the following on your command line
 ```ruby
-ruby fsdata_extract.rb -h
+ruby sysinfo_csvexport.rb -h
 ```
 
 Today these options are
 
-* -o, --output_path                Path to write .xlsx files
+* -o, --output_path                Path to write .csv files
 * -s, --sample_size [SECONDS]      Override default sample size
-* -i, --interval [INTERVAL]        Select interval (ytd, pm, mtd)
+* -i, --interval [INTERVAL]        Select interval (ytd, pcm, mtd,...)
 * -v, --verbose                    Run verbosely
+* -h, --help                       See complete list and description of command line options
 
 ### Output Path
-The spreadsheet will be written to the current directory ("./"), with the filename 'hostname-uuid.xlsx'.
+The spreadsheet will be written to the current directory ("./"), with the filename 'hostname-metric.csv'.
 
 To override the destination path, use the -o option. An example follows:
 
 ```ruby
-ruby fsdata_extract.rb '1234567890123456' -o 'fsdata-20121001'
+ruby sysinfo_csvexport.rb '1234567890123456' -o 'cuegg-data-20121001'
 ```
-In this example, all files will be written to the 'fsdata-20121001' subdirectory of the current directory. If the specified destination directory does not exist, it will be created.
+In this example, all files will be written to the 'cuegg-data-20121001' subdirectory of the current directory. If the specified destination directory does not exist, it will be created.
 
 ### Sample Size
 The 'sample size' refers to the interval over which each data point is averaged. The sample size in realtime operation is 5 seconds.
@@ -84,39 +86,23 @@ The sample size of the data returned by the API is a function of the range of ti
 In the following example, the data from the previous month is exported as a series of one day samples
 
 ```ruby
-ruby fsdata_extract.rb '1234567890123456' -o 'fsdata-20121001' -s 86400
+ruby sysdata_csvexport.rb '1234567890123456' -o 'sysdata-20121001' -s 86400
 ```
 
 ### Time Interval
 Specify the interval over which to export data. The default (no option specified) is to export the data from the previous calendar month. To specify exporting year-to-date filesystem data, use the '-i' option:
 
 ```ruby
-ruby fsdata_extract.rb '1234567890123456' -o 'fsdata-20121001' -i 'ytd'
+ruby sysdata_csvexport.rb '1234567890123456' -o 'sysdata-20121001' -i 'ytd'
 ```
 
 ### Verbosity
 To see what is happening as the script is running, include the -v option.
 
 
-## Outputs
+### CSV files
 
-### Analytics:
-
-A set of simple analytics is printed to the terminal screen when the script finishes. The following analytics will appear:
-* Total systems monitored this period
-* Total filesystems monitored this period
-* Number of filesystems > 95% full
-** if > 0, a list of the top 10 most full
-* Number of filesystems that have grown over the period exported
-** if > 0, a list of the top 10 most rapidly growing filesystems
-
-### Spreadsheets
-
-One spreadsheet is created for each system monitored during the time interval exported.
-
-### Charts
-
-Two charts are created for each filesystem, on every system monitored.
+One CSV file is created for each set of metrics, for each system or probe monitored during the time interval exported.
 
 
 ##  LICENSE
