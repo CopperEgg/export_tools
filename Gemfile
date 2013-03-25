@@ -1,5 +1,6 @@
 source 'https://rubygems.org'
-gem 'json'
-gem 'multi_json'
+gem 'json_pure'
+gem 'ethon'
+
 
 
