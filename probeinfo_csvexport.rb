@@ -7,27 +7,20 @@
 #encoding: utf-8
 
 require 'rubygems'
-require 'json'
-require 'pp'
-require 'typhoeus'
+require "json/pure"
 require 'csv'
+#require 'FileUtils'
+require './lib/ver'
 require './lib/exportoptions'
-require './lib/getprobes'
+require './lib/api'
+require './lib/filters'
 
 $output_path = "."
 $APIKEY = ""
 $outpath_setup = false
 $verbose = false
 $debug = false
-
-def valid_json? json_
-  begin
-    JSON.parse(json_)
-    return true
-  rescue Exception => e
-    return false
-  end
-end
+$Max_Timeout = 120
 
 def state_to_s _state
   @str = nil
@@ -40,10 +33,8 @@ def state_to_s _state
       @str = 'warn'
     when 3
       @str = 'critical'
-  end
-  if @str == nil
-    puts "Unrecognized state: "+_state.to_s+"/n"
-    @str = "???"
+    else
+      @str = '???'
   end
   return @str
 end
@@ -132,31 +123,11 @@ end
 # This is the main portion of the probeinfo_csvexport.rb utility
 #
 options = ExportOptions.parse(ARGV,"Usage: probeinfo_csvexport.rb APIKEY [options]","")
+puts $VersionString
 
 if options != nil
-  if $verbose == true
-    puts "\nOptions:\n"
-    pp options
-    puts "\n"
-  else
-    puts "\n"
-  end
   tr = Time.now
-  tr = tr.utc
-
-  trun = Time.gm(tr.year,tr.month,tr.day,tr.hour,tr.min,tr.sec)
-  tstart = Time.gm(options.start_year,options.start_month,options.start_day,options.start_hour,options.start_min,options.start_sec)
-  tend = Time.gm(options.end_year,options.end_month,options.end_day,options.end_hour,options.end_min,options.end_sec)
-
-  if tstart.utc? == false
-    tstart = tstart.utc
-  end
-  if tend.utc? == false
-    tend = tend.utc
-  end
-
-  ts = tstart.to_i
-  te = tend.to_i
+  trun = Time.new(tr.year,tr.month,tr.day,tr.hour,tr.min,tr.sec)
 
   puts  "Time and Date of this data export: "+trun.to_s+"\n"
   numberlive = 0
