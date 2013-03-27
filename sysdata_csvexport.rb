@@ -7,31 +7,32 @@
 #encoding: utf-8
 
 require 'rubygems'
-require 'json'
-require 'multi_json'
-require 'pp'
-require 'typhoeus'
+require "json/pure"
 require 'csv'
+#require 'FileUtils'
+require './lib/ver'
 require './lib/exportoptions'
-require './lib/getsystems'
 require './lib/headers'
+require './lib/api'
+require './lib/filters'
 
 $output_path = "."
 $APIKEY = ""
 $outpath_setup = false
 $verbose = false
 $debug = false
+$Max_Timeout = 120
 
+$times = nil
+$timed_calls = 0
 
 def valid_json? json_
   begin
     JSON.parse(json_)
-    return true
   rescue Exception => e
-    return false
+    return nil
   end
 end
-
 
 # syssamples_tocsv
 # this routine expects a single system id,
@@ -49,9 +50,13 @@ def syssamples_tocsv(_apikey, _uuid, _systemname, _keys, ts, te, ss)
     complex_syskeys = {"s_c" => ["active", "iowait","user", "nice", "system", "irq", "softirq", "steal", "guest"],
                        "s_i" => ["rx KB/s average", "tx KB/s average"],
                        "s_f" => ["used Gbytes", "free Gbytes"],
-                       "s_d" => ["reads  KB/s", "writes  KB/s"],
-                       "p"   => ["name", "internal","PID","UID","state","CPU % User",	"CPU % System",	"CPU % Total", "internal", 	"Memory Virtual", "Memory Resident", 	"internal",	"User UID",	"CPU % User",	"CPU % System", "CPU % Total", "internal use","	Memory Virtual", "Memory Resident",	"internal use"]
+                       "s_d" => ["reads  KB/s", "writes  KB/s"]
                       }
+
+    proc_syskeys    = {"p"   => ["name","cmd line","PID","UID","state","CPU % User",	"CPU % System",	"CPU % Total", "internal", 	"Memory Virtual", "Memory Resident", 	"internal"],
+                       "u"   =>	["User UID",	"CPU % User",	"CPU % System", "CPU % Total", "internal use","	Memory Virtual", "Memory Resident",	"internal use"]
+                      }
+
     simple_numcats =  {"h" => 10,
                       "r" => 1,
                       "b" => 1,
@@ -62,9 +67,13 @@ def syssamples_tocsv(_apikey, _uuid, _systemname, _keys, ts, te, ss)
     complex_numcats = {"s_c" => 9,
                        "s_i" => 2,
                        "s_f" => 2,
-                       "s_d" => 2,
-                       "p"   => 21
+                       "s_d" => 2
                       }
+
+    proc_numcats    = {"p"  => 12,
+                       "u"  => 8
+                      }
+
 
     keysto_strings =  { "h"   => "health",
                         "r"   => "run-procs",
@@ -78,6 +87,8 @@ def syssamples_tocsv(_apikey, _uuid, _systemname, _keys, ts, te, ss)
                         "s_d" => "diskio",
                         "p"   => "procs"
                       }
+    row_array = Array.new
+    firstpass = true
 
     if $outpath_setup == false    # ensure the following happens only once
       $outpath_setup = true
@@ -105,103 +116,131 @@ def syssamples_tocsv(_apikey, _uuid, _systemname, _keys, ts, te, ss)
        end # of 'if Dir.exists?($output_path.to_s+"/") == false'
       end
     end
+    start = Time.now
+    systemdata = GetSystemSamples.uuid( _apikey, _uuid, _keys, ts, te, ss)
+    $times[$timed_calls] = Time.now - start
+    $timed_calls += 1
 
-    keys = _keys
-    keys_array = Array.new
-    keys_array = keys.split(",")
-
-    if ss != 0
-      easy = Ethon::Easy.new(url: "https://"+_apikey.to_s+":U@api.copperegg.com/v2/revealcloud/samples.json?uuids="+_uuid.to_s+"&keys="+keys.to_s+"&starttime="+ts.to_s+"&endtime="+te.to_s+"&sample_size="+ss.to_s, followlocation: true, verbose: false, ssl_verifypeer: 0, headers: {Accept: "json"}, timeout: 10000)
+    if systemdata == nil
+      puts "\nSkipping " + _systemname.to_s + "\n"
     else
-      easy = Ethon::Easy.new(url: "https://"+_apikey.to_s+":U@api.copperegg.com/v2/revealcloud/samples.json?uuids="+_uuid.to_s+"&keys="+keys.to_s+"&starttime="+ts.to_s+"&endtime="+te.to_s, followlocation: true, verbose: false, ssl_verifypeer: 0, headers: {Accept: "json"}, timeout: 10000)
-    end # of 'if ss != 0'
-    easy.prepare
-    easy.perform
+      keys = _keys
+      keys_array = Array.new
+      keys_array = keys.split(",")
 
-    case easy.response_code
-      when 200
+      onesystem = Hash.new
+      onesystem = systemdata[0]
+
+      if (onesystem["_ts"] == nil) || (onesystem["_bs"] == nil)
+        if $debug == true
+          puts "_ts or _bs was nil. Skipping this system\n"
+        end
+      else  # else neither is nil
+        base_time = onesystem["_ts"]
+        sample_time = onesystem["_bs"]
+
         if $verbose == true
-          if ss == 0
-            puts "Requested data for system id "+_uuid+"; start date " + Time.at(ts).utc.to_s + " ("+ts.to_s+"); end date " + Time.at(te).utc.to_s+" ("+te.to_s+"); default sample size\n"
-          else
-            puts "Requested data for system id "+_uuid+"; start date " + Time.at(ts).utc.to_s + "; end date " + Time.at(te).utc.to_s+"; sample size "+ ss.to_s+"\n"
-          end # of 'if ss == 0'
-        end # of 'if $verbose == true'
-
-        if valid_json?(easy.response_body) != true
-           puts "\nParse error: Invalid JSON.\n"
-          return false
+          puts "system data actual start date "+ Time.at(base_time).getlocal.to_s + "; actual sample size " + sample_time.to_s + "\n"
         end
 
-        systemdata = JSON.parse(easy.response_body)
+        incr = sample_time.to_i
 
-        if systemdata.is_a?(Array) != true
-          puts "\nParse error: Expected an array.\n"
-          return false
-        elsif systemdata.length < 1
-          puts "\nNo system data found.\n"
-          return false
-        elsif systemdata.length != 1
-          puts "\nData from more than one system returned: Internal error.\n"
-          return false
+        # create a master bucket list for this sample set, to detect missing samples
+        buckets = Array.new         # contains timestamps indexed from 0 to numentries - 1
+        bucketoff = Array.new       # contains offsets indexed from 0 to numentries - 1
+        bucketcnt = 0
+        off = 0
+        t = ts
+
+        while t <= te
+          buckets[bucketcnt] = t
+          bucketoff[bucketcnt] = off
+          t = t + incr
+          off = off + incr
+          bucketcnt = bucketcnt + 1
         end
 
-        onesystem = Hash.new
-        onesystem = systemdata[0]
+        ctr = 0
+        while ctr <=  bucketcnt
+          row_array[ctr] = Array.new
+          ctr += 1
+        end
+        inp_keyhash = Hash.new      # one of these is pulled from the onesystem hash, and processed separately
 
-        if (onesystem["_ts"] == nil) || (onesystem["_bs"] == nil)
-          if $debug == true
-            puts "_ts or _bs was nil. Skipping this system\n"
-          end
-        else  # else neither is nil
-          base_time = onesystem["_ts"]
-          sample_time = onesystem["_bs"]
 
-          if $verbose == true
-            puts "system data actual start date "+ Time.at(base_time).utc.to_s + "; actual sample size " + sample_time.to_s + "\n"
-          end
+        # Loop through all metrics sets (keys)
+        keys_array.each do |keystr|
+          inp_keyhash = onesystem[keystr]     #inp_keyhash may have only samples (simple), or groups followed by samples (complex).
+          hdrrow = nil
+          row = Array.new
 
-          incr = sample_time.to_i
+          if simple_syskeys.has_key?(keystr)
+            hdrrow = CSVHeaders.create('simple',simple_syskeys[keystr],[],firstpass)
+            #csv << hdrrow
+            row_array[0].concat(hdrrow)
 
-          # create a master bucket list for this sample set, to detect missing samples
-          buckets = Array.new         # contains timestamps indexed from 0 to numentries - 1
-          bucketoff = Array.new       # contains offsets indexed from 0 to numentries - 1
-          bucketcnt = 0
-          off = 0
-          t = ts
+            numcats = simple_numcats[keystr]
+            samples = inp_keyhash
+            missctr = 0
+            arrayctr = 0
+            lastsample = 0
+            firstsample = -1
 
-          while t <= te
-            buckets[bucketcnt] = t
-            bucketoff[bucketcnt] = off
-            t = t + incr
-            off = off + incr
-            bucketcnt = bucketcnt + 1
-          end
+            # step through the expected offsets
+            while arrayctr < bucketcnt
+             #row[0] = Time.at(buckets[arrayctr].to_i).utc
 
-          inp_keyhash = Hash.new      # one of these is pulled from the onesystem hash, and processed separately
+              if firstpass == true
+                row_array[arrayctr+1].concat([Time.at(buckets[arrayctr].to_i).getlocal])
+              end
 
-          # Loop through all metrics sets (keys)
-          keys_array.each do |keystr|
-            inp_keyhash = onesystem[keystr]     #inp_keyhash may have only samples (simple), or groups followed by samples (complex).
+              val = samples[bucketoff[arrayctr].to_s]
+              if val.is_a?(Array) != true
+                tmpa = Array.new
+                tmpa[0] = val
+                val = tmpa
+              end
+              if val == nil
+                case numcats
+                  when 1
+                      row_array[arrayctr+1].concat([""])
+                  when 2
+                      row_array[arrayctr+1].concat(["", ""])
+                  when 4
+                      row_array[arrayctr+1].concat(["", "", "", ""])
+                  when 9
+                     row_array[arrayctr+1].concat(["", "", "", "", "", "", "", "", ""])
+                  when 10
+                     row_array[arrayctr+1].concat(["", "", "", "", "", "", "", "", "", ""])
+                end
+                missctr = missctr + 1
+              else
+                row_array[arrayctr+1].concat(val)
 
-            fname = $output_path.to_s+"/"+ _systemname.to_s+"-"+keysto_strings[keystr]+".csv"
-            if $verbose == true
-              puts "Writing to "+fname.to_s+"\n\n"
-            else
-              print "."
-            end
+                if firstsample == -1
+                  firstsample = arrayctr
+                end
+                lastsample = arrayctr
+              end
+              arrayctr = arrayctr + 1
+            end  # of 'while arrayctr < bucketcnt'
 
-            # creating one .csv for each set of metrics
-            CSV.open(fname.to_s, "wb") do |csv|
-            hdrrow = nil
-            row = Array.new
+          elsif complex_syskeys.has_key?(keystr)
+            numcats = complex_numcats[keystr]
+            names = Array.new
 
-            if simple_syskeys.has_key?(keystr)
-              hdrrow = CSVHeaders.create(simple_syskeys[keystr],[])
-              csv << hdrrow
+            if inp_keyhash != nil
+              ckeys = inp_keyhash.keys
 
-              numcats = simple_numcats[keystr]
-              samples = inp_keyhash
+              ctr = 0
+              while ctr < inp_keyhash.length
+                names[ctr] = ckeys[ctr].to_s
+                ctr = ctr + 1
+              end
+
+              hdrrow = CSVHeaders.create('complex',complex_syskeys[keystr],names,firstpass)
+              row_array[0].concat(hdrrow)
+
               missctr = 0
               arrayctr = 0
               lastsample = 0
@@ -209,114 +248,204 @@ def syssamples_tocsv(_apikey, _uuid, _systemname, _keys, ts, te, ss)
 
               # step through the expected offsets
               while arrayctr < bucketcnt
-                row[0] = Time.at(buckets[arrayctr].to_i).utc
-                val = samples[bucketoff[arrayctr].to_s]
-                if val.is_a?(Array) != true
-                  tmpa = Array.new
-                  tmpa[0] = val
-                  val = tmpa
+                if firstpass == true
+                  row_array[arrayctr+1].concat([Time.at(buckets[arrayctr].to_i).getlocal])
                 end
-                if val == nil
-                  case numcats
-                    when 1
-                      row.concat([""])
-                    when 2
-                      row.concat(["", ""])
-                    when 4
-                      row.concat(["", "", "", ""])
-                    when 9
-                      row.concat(["", "", "", "", "", "", "", "", ""])
-                    when 10
-                      row.concat(["", "", "", "", "", "", "", "", "", ""])
-                    when 21
-                      row.concat(["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""])
+                ckeys.each do |ckey|
+                  samples = inp_keyhash[ckey]
+                  val = samples[bucketoff[arrayctr].to_s]
+
+                  if val == nil
+                    case numcats
+                      when 1
+                         row_array[arrayctr+1].concat([""])
+                      when 2
+                        row_array[arrayctr+1].concat(["", ""])
+                      when 4
+                         row_array[arrayctr+1].concat(["", "", "", ""])
+                      when 9
+                         row_array[arrayctr+1].concat(["", "", "", "", "", "", "", "", ""])
+                      when 10
+                         row_array[arrayctr+1].concat(["", "", "", "", "", "", "", "", "", ""])
+                    end
+                    missctr = missctr + 1
+                  else
+                     row_array[arrayctr+1].concat(val)
+                    if firstsample == -1
+                      firstsample = arrayctr
+                    end
+                    lastsample = arrayctr
                   end
-                  missctr = missctr + 1
-                else
-                  row.concat(val)
-                  if firstsample == -1
-                    firstsample = arrayctr
-                  end
-                  lastsample = arrayctr
-                end
-                csv << row
-                row.clear
+                end  # of 'ckeys.each do'
                 arrayctr = arrayctr + 1
               end  # of 'while arrayctr < bucketcnt'
+            end
+          elsif keystr == "p"
+            if inp_keyhash != nil
+              ckeys = [ "p", "u" ]
 
-            elsif complex_syskeys.has_key?(keystr)
-              numcats = complex_numcats[keystr]
-              names = Array.new
-              if inp_keyhash != nil
-                ckeys = inp_keyhash.keys
-                ctr = 0
-                while ctr < inp_keyhash.length
-                  names[ctr] = ckeys[ctr].to_s
-                  ctr = ctr + 1
+              missctr = 0
+              arrayctr = 0
+              lastsample = 0
+              firstsample = -1
+              max_pprocs = 0
+              num_pprocs = 0
+              max_uprocs = 0
+              num_uprocs = 0
+
+             # first run through all time samples, and find max number of pprocs and
+              # max number of uprocs
+              while arrayctr < bucketcnt
+                samples = inp_keyhash[bucketoff[arrayctr].to_s]
+                if samples != nil
+                  newsamples = valid_json?(samples)
+                  if newsamples != nil
+                    samples = newsamples
+                  end
+
+                  pval = samples["p"]         # this is an array of arays
+                  num_pprocs = pval.length
+
+                  if num_pprocs > max_pprocs
+                    max_pprocs = num_pprocs
+                  end
+
+                  uval = samples["u"]         # this is an array of arays
+                  num_uprocs = uval.length
+
+                  if num_uprocs > max_uprocs
+                    max_uprocs = num_uprocs
+                  end
                 end
-                hdrrow = CSVHeaders.create(complex_syskeys[keystr],names)
-                csv << hdrrow
+                arrayctr += 1
+              end
 
-                missctr = 0
-                arrayctr = 0
-                lastsample = 0
-                firstsample = -1
+              arrayctr = 0
+              num_pprocs = 0
+              num_uprocs = 0
 
-                # step through the expected offsets
-                while arrayctr < bucketcnt
-                  row[0] = Time.at(buckets[arrayctr].to_i).utc
-                  ckeys.each do |ckey|
-                    samples = inp_keyhash[ckey]
-                    val = samples[bucketoff[arrayctr].to_s]
+               # step through the exp  ected offsets
+              while arrayctr < bucketcnt
+                if firstpass == true
+                  row_array[arrayctr+1].concat([Time.at(buckets[arrayctr].to_i).getlocal])
+                end
 
-                    if val == nil
-                      case numcats
-                        when 1
-                          row.concat([""])
-                        when 2
-                          row.concat(["", ""])
-                        when 4
-                          row.concat(["", "", "", ""])
-                        when 9
-                          row.concat(["", "", "", "", "", "", "", "", ""])
-                        when 10
-                          row.concat(["", "", "", "", "", "", "", "", "", ""])
-                        when 21
-                          row.concat(["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""])
+                samples = inp_keyhash[bucketoff[arrayctr].to_s]
+                if samples != nil
+                  newsamples = valid_json?(samples)
+                  if newsamples != nil
+                    samples = newsamples
+                  end
+
+                  pval = samples["p"]         # this is an array of arays
+                  uval = samples["u"]
+                  if pval != nil
+                    num_pprocs = pval.length
+                    excess = max_pprocs - num_pprocs
+
+                    pctr = 0
+                    while pctr < num_pprocs
+                      if pval[pctr] == nil
+                        row_array[arrayctr+1].concat(["", "", "", "", "", "", "", "", "", "", "", ""])
+                      else
+                        if pval[pctr].is_a?(Array)
+                          row_array[arrayctr+1].concat(pval[pctr])
+                          if firstsample == -1
+                            firstsample = arrayctr
+                          end
+                          lastsample = arrayctr
+                        else
+                          if $debug == true
+                            puts "\npctr is " + pctr.to_s + "; pval[pctr] is not an array : \n"
+                            print "\n"
+                          end
+                        end
                       end
-                      missctr = missctr + 1
-                    else
-                      row.concat(val)
-                      if firstsample == -1
-                        firstsample = arrayctr
-                      end
-                      lastsample = arrayctr
+                      pctr += 1
                     end
-                  end  # of 'ckeys.each do'
-                  csv << row
-                  row.clear
-                  arrayctr = arrayctr + 1
-                end  # of 'while arrayctr < bucketcnt'
-              end
-            else
-              if $debug == true
-                puts "DEBUG:  Unsupported key: "+keystr+"\n"
-              end
-            end  # of 'complex_syskeys.has_key?(keystr)'
-          end
-          end  # of 'keys_array.each do'
-        end  # end of 'else neither is nil'
-      when 404
-        puts "\n HTTP 404 error returned. Aborting ...\n"
-      when 500...600
-        puts "\n HTTP " +  easy.response_code.to_s +  " error returned. Aborting ...\n"
-    end # end of switch on easy.response_code
-    return false
 
-  rescue Exception => e
-    puts "system_samples exception ... error is " + e.message + "\n"
-    return false
+                    if excess > 0
+                      pctr = 0
+                      while pctr < excess
+                        row_array[arrayctr+1].concat(["", "", "", "", "", "", "", "", "", "", "", ""])
+                        pctr += 1
+                      end
+                    end
+                  end
+                  uval = samples["u"]         # this is an array of arays
+
+                  if uval != nil
+                    num_uprocs = uval.length
+                    excess = max_uprocs - num_uprocs
+
+                    pctr = 0
+                    while pctr < num_uprocs
+                      if uval[pctr] == nil
+                        row_array[arrayctr+1].concat(["", "", "", "", "", "", "", "", "", "", "", ""])
+                      else
+                        row_array[arrayctr+1].concat(uval[pctr])
+                      end
+                      pctr += 1
+                    end
+
+                    if excess > 0
+                      pctr = 0
+                      while pctr < excess
+                        row_array[arrayctr+1].concat(["", "", "", "", "", "", "", "", "", "", "", ""])
+                        pctr += 1
+                      end
+                    end
+                  end
+                end
+                arrayctr = arrayctr + 1
+              end  # of 'while arrayctr < bucketcnt'
+              proc_ctr = 0
+              while proc_ctr < max_pprocs
+                hdrrow = CSVHeaders.create('simple', proc_syskeys["p"] ,[],firstpass)
+                firstpass = false
+                row_array[0].concat(hdrrow)
+                proc_ctr += 1
+              end
+              proc_ctr = 0
+              while proc_ctr < max_uprocs
+                hdrrow = CSVHeaders.create('simple', proc_syskeys["u"] ,[],firstpass)
+                firstpass = false
+                row_array[0].concat(hdrrow)
+                proc_ctr += 1
+              end
+            end
+          else
+            if $debug == true
+              puts "DEBUG:  Unsupported key: "+keystr+"\n"
+            end
+          end  # of 'complex_syskeys.has_key?(keystr)'
+          firstpass = false
+        end  # of 'keys_array.each do'
+
+        _systemname.gsub!('/','_')
+        _systemname.gsub!('\\','_')
+
+       fname = $output_path.to_s+"/"+ _systemname.to_s+".csv"
+        if $verbose == true
+          puts "Writing to "+fname.to_s+"\n\n"
+        else
+          print "."
+        end
+
+        CSV.open(fname.to_s, "wb", {:force_quotes => true}) do |csv|
+          ctr = 0
+          while ctr <= bucketcnt
+            csv << row_array[ctr]
+            ctr += 1
+          end
+        end
+      end  # end of 'else neither is nil'
+    end
+ # rescue Exception => e
+ #   puts "system_samples exception " + e.message + "\n"
+ #   puts "\nSkipping " + _systemname.to_s + "\n"
   end  # of begin
+  return true
 end  # of system_samples
 
 #
@@ -336,35 +465,26 @@ abrv_to_key =   { "h"   => "h",
                   "p"   => "p"
                   }
 
-options = ExportOptions.parse(ARGV,"Usage: sysdata_csvexport.rb APIKEY [options]","systems")
+options = ExportOptions.parse(ARGV,"Usage: sysdata_csvexport.rb APIKEY [options]","sysdata")
+puts $VersionString
 if options != nil
-  if $verbose == true
-    pp options
-    puts "\n"
-  else
-    puts "\n"
-  end
   tr = Time.now
-  tr = tr.utc
 
-  trun = Time.gm(tr.year,tr.month,tr.day,tr.hour,tr.min,tr.sec)
-  tstart = Time.gm(options.start_year,options.start_month,options.start_day,options.start_hour,options.start_min,options.start_sec)
-  tend = Time.gm(options.end_year,options.end_month,options.end_day,options.end_hour,options.end_min,options.end_sec)
+  trun = Time.new(tr.year,tr.month,tr.day,tr.hour,tr.min,tr.sec)
+  tstart = Time.new(options.start_year,options.start_month,options.start_day,options.start_hour,options.start_min,options.start_sec)
+  tend = Time.new(options.end_year,options.end_month,options.end_day,options.end_hour,options.end_min,options.end_sec)
 
-  if tstart.utc? == false
-    tstart = tstart.utc
-  end
-  if tend.utc? == false
-    tend = tend.utc
-  end
+  tstart_local =  tstart
+  tend_local = tend
+  trun_local = trun
 
-  ts = tstart.to_i
-  te = tend.to_i
+  ts = tstart.utc.to_i
+  te = tend.utc.to_i
 
   ss = options.sample_size_override
 
   if options.metrics == nil
-    keys = "h,r,b,l,m,s,s_c,s_f,s_d,s_i"
+    keys = "h,r,b,l,m,s,s_c,s_f,s_d,s_i,p"
   else
     keys = ""
     options.metrics.each do |more|
@@ -375,33 +495,96 @@ if options != nil
       end
     end
   end
-  if $verbose
-    print "Selected keys : "+keys+"\n"
-  end
-  puts  "Time and Date of this data export: "+trun.to_s+"\n"
+
+  $times = Array.new
+  $timed_calls = 0
+
+  puts  "Time and Date of this data export: "+trun.to_s+"\n\n"
+  puts  "Requesting data from " + tstart.getlocal.to_s + " to " + tend.getlocal.to_s + " local time\n"
+  puts  "Requesting data from " + tstart.utc.to_s + " to " + tend.utc.to_s + "\n"
+  puts  "Selected keys : "+keys+"\n"
+  if ss == 0
+    puts "Using defalt sample size\n"
+  else
+    puts "Sample size override is " + options.sample_size_override.to_s + "\n"
+ end
+
   numberlive = 0
   livesystems = Array.new
-  livesystems = GetSystems.all($APIKEY)
+  filteredsystems = Array.new
 
-  if livesystems != nil
-    numberlive = livesystems.length
+  if options.tag != ""
+    # handle request for data from tagged systems
+    puts  "Requesting systems with tag " + options.tag + "\n"
+    livesystems = GetSystems.all($APIKEY)
+    if livesystems == nil || livesystems == []
+      puts "\nNo systems found.\n"
+      exit
+    end
+    filteredsystems = systemsfilter_bytag(livesystems,options.tag)
+    if filteredsystems == nil || filteredsystems == []
+      puts "\nNo systems with tag " + options.tag + " found.\n"
+      exit
+    end
+  elsif options.monitor != ""
+    # handle request for data from single uuid
+    puts  "Requesting system with UUID " + options.monitor.to_s + "\n"
+    livesystems = GetSystems.all($APIKEY)
+    if livesystems == nil
+      puts "GetSystems returned nil\n"
+      exit
+    end
+    filteredsystems = systemsfilter_byuuid(livesystems,options.monitor)
+    if filteredsystems == nil || filteredsystems == []
+      puts "\nSystem with UUID " + options.monitor.to_s + " not found.\n"
+      exit
+    end
+  else
+    # handle request for all systems
+    puts  "Requesting all systems\n"
+    livesystems = GetSystems.all($APIKEY)
+    if livesystems == nil || livesystems == []
+      puts "\nNo systems found.\n"
+      exit
+    end
+    filteredsystems = livesystems
+  end
+
+  if filteredsystems != nil
+    numberlive = filteredsystems.length
     arrayindex = 0
     while arrayindex < numberlive
-      uuid = livesystems[arrayindex]["uuid"]
-      attrs = livesystems[arrayindex]["a"]
+      uuid = filteredsystems[arrayindex]["uuid"]
+      attrs = filteredsystems[arrayindex]["a"]
       # filter out those not updated during this period
-      if attrs["p"] > ts
-        hostname = attrs["n"]
-        if hostname == nil
-          hostname = uuid
-        else
-          hostname = hostname+"-"+uuid
+      if attrs != nil
+        if attrs["p"] != nil
+          if attrs["p"] > ts
+            hostname = attrs["n"]
+            if hostname == nil
+              hostname = uuid
+            else
+              hostname = hostname+"-"+uuid
+            end
+            puts "uuid is " + uuid.to_s + "\n"
+            tmpresult = syssamples_tocsv($APIKEY, uuid, attrs["n"],keys, ts, te, ss)
+            if tmpresult == false
+              exit
+            end
+          end
         end
-        tmpresult = syssamples_tocsv($APIKEY, uuid, attrs["n"],keys, ts, te, ss)
       end
       arrayindex = arrayindex + 1
     end # of 'while arrayindex < numberlive'
+    if $debug == true
+      puts "\n\nexecutions times : \n"
+      ctr = 0
+      while ctr < $timed_calls
+        puts $times[ctr].to_s + "\n"
+        ctr = ctr + 1
+      end
+    end
   else
     puts "find_systems returned nil\n"
-  end # of 'if livesystems != nil'
+  end # of 'if filteredsystems != nil'
 end

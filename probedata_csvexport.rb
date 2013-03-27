@@ -7,88 +7,27 @@
 #encoding: utf-8
 
 require 'rubygems'
-require 'json'
-require 'typhoeus'
+require "json/pure"
 require 'csv'
+#require 'FileUtils'
+require './lib/ver'
 require './lib/exportoptions'
-require './lib/getprobes'
+require './lib/headers'
+require './lib/api'
+require './lib/filters'
 
 $output_path = "."
 $APIKEY = ""
 $outpath_setup = false
 $verbose = false
 $debug = false
+$Max_Timeout = 120
 
+$times = nil
+$timed_calls = 0
 
-def valid_json? json_
+def probedata_to_csv(row_array,probename)
   begin
-    JSON.parse(json_)
-    return true
-  rescue Exception => e
-    return false
-  end
-end
-
-def state_to_s _state
-  @str = nil
-  case _state
-    when 0
-      @str = 'unknown'
-    when 1
-      @str = 'ok'
-    when 2
-      @str = 'warn'
-    when 3
-      @str = 'critical'
-  end
-  if @str == nil
-    puts "Unrecognized state: "+_state.to_s+"/n"
-    @str = "???"
-  end
-  return @str
-end
-
-def stamap _abrv
-  @str = nil
-  case _abrv
-    when "atl"
-      @str = "Atlanta"
-    when "nrk"
-      @str = "Newark"
-    when "lon"
-      @str = "London"
-    when "fre"
-      @str = "Fremont"
-    when "dal"
-      @str = "Dallas"
-    when "tok"
-      @str = "Tokyo"
-  end
-  if @str == nil
-    puts "Unrecognized Station: "+_abrv.to_s+"/n"
-    @str = "???"
-  end
-  return @str
-end
-
-def nonil _this
-  if _this == nil
-    return ""
-  else
-    return _this
-  end
-end
-
-=begin
-  probedata_to_csv will create one .csv file, containing data for one metric, in the specified output directory.
-  The filename will be probename-metric.csv
-=end
-
-def probedata_to_csv(metrichash, probename, metric)
-  begin
-    if $debug == true
-      puts "At start of probedata_to_csv and output path is "+$output_path.to_s+"\n"
-    end
     if $outpath_setup == false    # ensure the following happens only once
       $outpath_setup = true
       if $output_path != "."
@@ -116,76 +55,62 @@ def probedata_to_csv(metrichash, probename, metric)
       end  # of 'if $output_path != "."'
     end  # of 'if $outpath_setup == false'
 
-    fname = $output_path.to_s+"/"+probename.to_s+"-"+metric.to_s+".csv"
+    probename.gsub!('/','_')
+    probename.gsub!('\\','_')
+    fname = $output_path.to_s+"/"+probename.to_s+".csv"
     if $verbose == true
       puts "Writing to "+fname.to_s+"\n\n"
     end
 
     CSV.open(fname.to_s, "wb") do |csv|
-
-      station_num = metrichash.length
-      stationkeys = metrichash.keys
-
-      if station_num  < 1
-        puts "No station data found!\n"
-        return false
-      end # of ' if station_num < 1'
-
-      row0 = Array.new
-      row0[0] = "Date & Time UTC"
-      colctr = 1
-      sctr = 0
-      while sctr < station_num
-        row0[colctr]=stationkeys[sctr].to_s + "  "+metric
-        colctr = colctr + 1
-        sctr = sctr + 1
-      end # of 'while sctr < station_num'
-      csv << row0
-
-      probevals = Array.new
-      probevals = metrichash[stationkeys[0]]
-      numentries = probevals.length
-
-      entrynum = 0
-      while entrynum < numentries
-        row0.clear
-        sctr = 0
-        t_entry = Time.at(metrichash[stationkeys[sctr]][entrynum][0])
-        if t_entry.utc? == false
-          t_entry = t_entry.utc
-        end # of 't_entry.utc? == false'
-
-        row0[0] = t_entry.to_s
-        while sctr < station_num
-          if metrichash[stationkeys[sctr]][entrynum][1] == ""
-            row0[1+(sctr)] = ""
-          else
-            row0[1+(sctr)] = metrichash[stationkeys[sctr]][entrynum][1]
-          end
-          sctr = sctr + 1
-        end # of 'while sctr < station_num'
-        csv << row0
-        entrynum = entrynum + 1
-      end # of 'while entrynum < numentries'
-    end # of 'CSV.open(fname.to_s, "w") do |csv|'
-
-   return true
+      ctr = 0
+      while ctr < row_array.length
+        csv << row_array[ctr]
+        ctr += 1
+      end
+    end
+    return true
   rescue Exception => e
     puts "probedata_to_csv exception ... error is " + e.message + "\n"
     return false
   end
 end
 
-
-# probe_samples
+# parse_probe_samples
 # this routine expects a single probe id,
-#   which may contain up to 3 sets of metric keys, with
+#   which may contain up to 4 sets of metric keys, with
 #   data from up to 5 stations
 
-def probe_samples(_apikey, _id, _probename, _stations, _keys, ts, te, ss)
+def parse_probe_samples(_apikey, _id, _probename, _stations, _keys, ts, te, ss)
   begin
-    if _stations.is_a?(Array) != true
-      puts "\nprobe_samples: invalid parameter: _stations must be an array.\n"
+
+    complex_syskeys = {"s_s" => ["status codes"],
+                       "s_u" => ["% uptime"],
+                       "s_h" => ["health"],
+                       "s_l" => ["connect time", "time to first byte", "transfer time", "total"]
+                      }
+
+
+    complex_numcats = {"s_s" => 1,
+                       "s_u" => 1,
+                       "s_h" => 1,
+                       "s_l" => 4
+                      }
+
+    if $debug == true
+      puts "DEBUG:  parse_probe_samples: " + _probename.to_s + "\n"
+    end
+    start = Time.now
+    probe_samplehash = GetProbeSamples.probeid(_apikey, _id, _keys, ts, te, ss)
+    $times[$timed_calls] = Time.now - start
+    $timed_calls += 1
+
+    row_array = Array.new
+    firstpass = true
+    if probe_samplehash == nil
+      if $verbose == true
+        puts "\nSkipping probe " + _probename.to_s + "\n"
+      end
       return nil
     end
 
@@ -193,180 +118,154 @@ def probe_samples(_apikey, _id, _probename, _stations, _keys, ts, te, ss)
     keys_array = Array.new
     keys_array = keys.split(",")
 
-    if ss != 0
-      easy = Ethon::Easy.new(url: "https://"+_apikey.to_s+":U@api.copperegg.com/v2/revealuptime/samples.json?ids="+_id.to_s+"&keys="+keys.to_s+"&starttime="+ts.to_s+"&endtime="+te.to_s+"&sample_size="+ss.to_s, followlocation: true, verbose: false, ssl_verifypeer: 0, headers: {Accept: "json"}, timeout: 10000)
-    else
-      easy = Ethon::Easy.new(url: "https://"+_apikey.to_s+":U@api.copperegg.com/v2/revealuptime/samples.json?ids="+_id.to_s+"&keys="+keys.to_s+"&starttime="+ts.to_s+"&endtime="+te.to_s, followlocation: true, verbose: false, ssl_verifypeer: 0, headers: {Accept: "json"}, timeout: 10000)
-    end # of 'if ss != 0'
-    easy.prepare
-    easy.perform
+    inp_stations = Array.new
+    inp_stations = _stations
+    total_station_cnt = inp_stations.length
 
-    case easy.response_code
-      when 200
-        if $verbose == true
-          if ss == 0
-            puts "Requested data for Probe id "+_id+"; start date " + Time.at(ts).utc.to_s + "; end date " + Time.at(te).utc.to_s+"; default sample size\n"
-          else
-            puts "Requested data for Probe id "+_id+"; start date " + Time.at(ts).utc.to_s + "; end date " + Time.at(te).utc.to_s+"; sample size "+ ss.to_s+"\n"
-          end # of 'if ss == 0'
-        end # of 'if $verbose == true'
+    samplehash = probe_samplehash[0]
+    if $debug == true
+      puts "samplehash for probe " + _probename.to_s + "\n"
+      p samplehash
+      print "\n"
+    end
+    if samplehash == nil
+      if $debug == true
+        puts "samplehash is nil; skipping probe " + _probename.to_s + "\n"
+      end
+      return nil
+    end
+    base_time = samplehash["_ts"]
+    sample_time = samplehash["_bs"]
 
-        if valid_json?(easy.response_body) != true
-           puts "\nParse error: Invalid JSON.\n"
-          return nil
+    if (base_time == nil) || (sample_time == nil)
+      if $debug == true
+        puts "_ts or _bs was nil. Skipping probe " + _probename.to_s + "\n"
+      end
+      return nil
+    end
+
+    if $verbose == true
+      puts "Probe data actual start date "+ Time.at(base_time).getlocal.to_s + "; actual sample size " + sample_time.to_s + "\n"
+    end
+    if $debug == true
+      puts "DEBUG:  building buckets\n"
+    end
+
+    incr = sample_time.to_i
+
+    # create a master bucket list for this probe, to detect missing samples
+    buckets = Array.new
+    bucketoff = Array.new
+    bucketcnt = 0
+    off = 0
+    t = ts
+
+    while t <= te
+      buckets[bucketcnt] = t
+      bucketoff[bucketcnt] = off
+      t = t + incr
+      off = off + incr
+      bucketcnt = bucketcnt + 1
+    end
+
+    ctr = 0
+    while ctr <=  bucketcnt     # add one for the header row
+      row_array[ctr] = Array.new
+      ctr += 1
+    end
+
+    metric_hash = Hash.new
+    station_hash = Hash.new
+
+    # Loop through all metrics sets (keys)
+    keys_array.each do |keystr|
+      if $debug == true
+        puts "\nDEBUG: beginning key " + keystr + "\n"
+      end
+
+      metric_hash = samplehash[keystr]
+      if metric_hash == nil
+        if $debug == true
+          puts "\nDEBUG: nil metric_hash for metric key " + keystr + ":\n"
         end
-
-        probedata = JSON.parse(easy.response_body)
-        if probedata.is_a?(Array) != true
-          puts "\nParse error: Expected an array.\n"
-          return nil
-        elsif probedata.length < 1
-          puts "\nNo probe data found.\n"
-          return nil
-        elsif probedata.length != 1
-          puts "\nData from more than one probe returned: Internal error.\n"
-          return nil
+        return nil
+      end
+      if metric_hash.empty? == false
+        if $debug == true
+          puts "metric_hash for key " + keystr.to_s + "\n"
+          p metric_hash
+          print "\n"
         end
+        hdrrow = CSVHeaders.create('complex',complex_syskeys[keystr],inp_stations,firstpass)
+        row_array[0].concat(hdrrow)
 
-        inp_stations = Array.new
-        inp_stations = _stations
-        total_station_cnt = inp_stations.length
-
-        oneprobe = Hash.new
-        oneprobe = probedata[0]
-
-        if (oneprobe["_ts"] == nil) || (oneprobe["_bs"] == nil)
+        # Loop through all monitoring stations
+        inp_stations.each do |station|
+          station_hash = metric_hash[station]
           if $debug == true
-            puts "_ts or _bs was nil. Skipping this probe\n"
+            puts "\nDEBUG: beginning station " + station + ":\n"
+            puts "\nDEBUG: station_hash station " + station + "; key " + keystr.to_s + "\n"
+            p station_hash
+            print "\n"
           end
-        else
-          base_time = oneprobe["_ts"]
-          sample_time = oneprobe["_bs"]
-
-          if $verbose == true
-            puts "Probe data actual start date "+ Time.at(base_time).utc.to_s + "; actual sample size " + sample_time.to_s + "\n"
-          end
-          if $debug == true
-            puts "DEBUG:  top of probe_samples; oneprobe is:\n"
-            p oneprobe
-            puts "\n"
-          end
-
-          incr = sample_time.to_i
-
-          # create a master bucket list for this sample set, to detect missing samples
-          buckets = Array.new
-          bucketoff = Array.new
-          bucketcnt = 0
-          off = 0
-          t = ts
-
-          while t <= te
-            buckets[bucketcnt] = t
-            bucketoff[bucketcnt] = off
-            t = t + incr
-            off = off + incr
-            bucketcnt = bucketcnt + 1
-          end
-
-          # this is the output hash
-          probe_hash = Hash.new
-          one_keyhash = Hash.new
-
-          station_hash = Hash.new
-
-          # Loop through all metrics sets (keys)
-          keys_array.each do |keystr|
-            station_hash = oneprobe[keystr]
+          if station_hash == nil
             if $debug == true
-              puts "DEBUG:  station_hash is:\n"
-              p station_hash
-              puts "\n"
+              puts "\nDEBUG: nil station_hash " + station + ":\n"
+            end
+            return nil
+          end
+
+          missctr = 0
+          arrayctr = 0
+          lastsample = 0
+          firstsample = -1
+          numcats = complex_numcats[keystr]
+
+          # step through the expected offsets
+          while arrayctr < bucketcnt
+            if firstpass == true
+              row_array[arrayctr+1].concat([Time.at(buckets[arrayctr].to_i).getlocal])
             end
 
-            # Loop through all monitoring stations
-            station_hash.each do |_station,_samples|
-              samples = Hash.new
-              samples = _samples
-              if $debug == true
-                puts "DEBUG:  samples hash is:\n"
-                p _samples
-                puts "\n"
-              end
-
-              if keystr == "s_u" || keystr == "s_l" || keystr == "s_s"
-                missctr = 0
-                tmp = Array.new
-                arrayctr = 0
-                lastsample = 0
-                firstsample = -1
-
-                # step through the expected offsets
-                while arrayctr < bucketcnt
-                  val = samples[bucketoff[arrayctr].to_s]
-                  if val == nil
-                    tmp[arrayctr] =  [buckets[arrayctr], ""]
-                    missctr = missctr + 1
-                  else
-                    tmp[arrayctr] =  [buckets[arrayctr], val]
-                    if firstsample == -1
-                      firstsample = arrayctr
-                    end
-                    lastsample = arrayctr
-                    #puts "last sample is "+lastsample.to_s+"\n\t"
-                    #p tmp[lastsample]
+            val = station_hash[bucketoff[arrayctr].to_s]
+            if val == nil
+              case numcats
+                when 1
+                  row_array[arrayctr+1].concat([""])
+                when 4
+                  row_array[arrayctr+1].concat(["", "", "", ""])
+                else
+                  if $debug == true
+                    puts "\nDEBUG: numcats not 1 or 4\n"
                   end
-                  arrayctr = arrayctr + 1
-                end # end of this stations' samples
-
-                missctr = 0
-                arrayctr = firstsample
-                while arrayctr <= lastsample
-                  if tmp[arrayctr] ==  [buckets[arrayctr], ""]
-                    missctr = missctr + 1
-                  end
-                  arrayctr = arrayctr + 1
-                end # end of this stations' samples
-
-                # interpolate code here
-                if $debug == true
-                  puts "Adding station "+stamap(_station.to_s)+":\n"
-                  p tmp
-                  puts "\n"
-                end
-
-                one_keyhash[stamap(_station.to_s)] = tmp
-
-              #elsif keystr == "s_s"
-
-              #elsif keystr == "s_l"
-              else
-                puts "\nUnsupported metric key.\n"
-                return nil
+                  return nil
               end
-            end  # end of 'station_hash.each do'
-            if $debug == true
-              puts "Adding metric "+keystr.to_s+":\n"
-              p one_keyhash
-              puts "\n"
+              missctr = missctr + 1
+            else
+              if val.is_a?(Array) != true
+                tmpa = Array.new
+                tmpa[0] = val
+                val = tmpa
+              end
+              row_array[arrayctr+1].concat(val)
+
+              if firstsample == -1
+                firstsample = arrayctr
+              end
+              lastsample = arrayctr
             end
-
-            probe_hash[keystr]=one_keyhash
-
-          end  # end of 'metricskeys.each do'
-          if $debug == true
-            puts "probe_hash :\n"
-            p probe_hash
-            puts "\n"
-          end
-          return probe_hash
-        end  # of 'if (oneprobe["_ts"] == nil) || (oneprobe["_bs"] == nil)'
-      when 404
-        puts "\n HTTP 404 error returned. Aborting ...\n"
-      when 500...600
-        puts "\n HTTP " +  easy.response_code.to_s +  " error returned. Aborting ...\n"
-    end # end of switch on easy.response_code
-    return false
+            arrayctr = arrayctr + 1
+          end # end of this stations' samples
+          firstpass = false
+        end  # 'inp_stations.each do |station|'
+      end # 'metric_hash.empty? == false'
+    end  # end of 'keys_array.each do |keystr|'
+    if $debug == true
+      puts "header :\n"
+      p row_array[0]
+      puts "\n"
+    end
+  return row_array
   end
 end
 
@@ -374,71 +273,107 @@ end
 #
 # This is the main portion of the probedata_csvexport.rb utility
 #
-options = ExportOptions.parse(ARGV,"Usage: probedata_csvexport.rb APIKEY [options]","")
+options = ExportOptions.parse(ARGV,"Usage: probedata_csvexport.rb APIKEY [options]","probedata")
+puts $VersionString
 
 if options != nil
-  if $verbose == true
-    puts "\nSelected options:\n"
-    p options
-    puts "\n"
-  else
-    puts "\n"
-  end
   tr = Time.now
-  tr = tr.utc
 
-  trun = Time.gm(tr.year,tr.month,tr.day,tr.hour,tr.min,tr.sec)
-  tstart = Time.gm(options.start_year,options.start_month,options.start_day,options.start_hour,options.start_min,options.start_sec)
-  tend = Time.gm(options.end_year,options.end_month,options.end_day,options.end_hour,options.end_min,options.end_sec)
+  trun = Time.new(tr.year,tr.month,tr.day,tr.hour,tr.min,tr.sec)
+  tstart = Time.new(options.start_year,options.start_month,options.start_day,options.start_hour,options.start_min,options.start_sec)
+  tend = Time.new(options.end_year,options.end_month,options.end_day,options.end_hour,options.end_min,options.end_sec)
 
-  if tstart.utc? == false
-    tstart = tstart.utc
-  end
-  if tend.utc? == false
-    tend = tend.utc
-  end
+  tstart_local =  tstart
+  tend_local = tend
+  trun_local = trun
 
-  ts = tstart.to_i
-  te = tend.to_i
+  ts = tstart.utc.to_i
+  te = tend.utc.to_i
 
   ss = options.sample_size_override
 
-  keys = "s_u,s_s,s_l"
+  if options.metrics == nil
+    keys = "s_h,s_u,s_s,s_l"
+  else
+    keys = ""
+    options.metrics.each do |more|
+      if keys == ""
+        keys = more
+      else
+        keys = keys+","+ more
+      end
+    end
+  end
 
-  puts  "Time and Date of this data export: "+trun.to_s+"\n"
+  $times = Array.new
+  $timed_calls = 0
+
+  puts  "Time and Date of this data export: "+trun.to_s+"\n\n"
+  puts  "Requesting data from " + tstart.getlocal.to_s + " to " + tend.getlocal.to_s + " local time\n"
+  puts  "Requesting data from " + tstart.utc.to_s + " to " + tend.utc.to_s + "\n"
+  puts  "Selected keys : "+keys+"\n"
+  if ss == 0
+    puts "Using defalt sample size\n"
+  else
+    puts "Sample size override is " + options.sample_size_override.to_s + "\n"
+  end
+
   allprobes = Array.new
+  filteredprobes = Array.new
   allprobes = GetProbes.all($APIKEY)
-  if allprobes != nil
-    this_probe = Hash.new
+  if allprobes == nil || allprobes == []
+    puts "\nNo probes found.\n"
+    exit
+  end
 
-    # Loop through each defined probe
-    ctr = 0
-    while ctr < allprobes.length
-      this_probe = allprobes[ctr]
+  if options.tag != ""
+    # handle request for data from tagged probes
+    filteredprobes = probesfilter_bytag(allprobes,options.tag)
+    if filteredprobes == nil || filteredprobes == []
+      puts "\nNo probes with tag " + options.tag + " found.\n"
+      exit
+    end
+  elsif options.monitor != ""
+    # handle request for data from single uuid
+    filteredprobes = probesfilter_byid(allprobes,options.monitor)
+    if filteredprobes == nil || filteredprobes == []
+      puts "\nProbe with ID " + options.monitor.to_s + " not found.\n"
+      exit
+    end
+  else
+    # handle request for all systems
+    filteredprobes = allprobes
+  end
 
-      probehash = probe_samples($APIKEY, this_probe["id"], this_probe["probe_desc"], this_probe["stations"], keys, ts, te, ss)
+  row_array = Array.new
 
-      # Now loop through each metric specified with keys, and create a csv
-      keys_array = Array.new
-      keys_array = probehash.keys       # "s_u", "s_l", "s_s"
-
-      keys_array.each do |keystr|
-        metric = nil
-        case keystr
-          when "s_u"
-            metric = "Uptime"
-          when "s_l"
-            metric = "Latency"
-          when "s_s"
-            metric = "StatusCodes"
+  if filteredprobes != nil
+    numberlive = filteredprobes.length
+    arrayindex = 0
+    while arrayindex < numberlive
+      this_probe = filteredprobes[arrayindex]
+      if $verbose == false
+        print "."
+      end
+      row_array =  parse_probe_samples($APIKEY, this_probe["id"], this_probe["probe_desc"], this_probe["stations"], keys, ts, te, ss)
+      if row_array != nil && row_array.empty? == false
+        tmpresult = probedata_to_csv(row_array,this_probe["probe_desc"])
+      else
+        if $debug == true
+          puts "\n\nDEBUG: parse_probe_samples retuned nil! " + this_probe["probe_desc"].to_s +  "\n"
         end
-        if metric != nil
-          probedata_to_csv(probehash[keystr],this_probe["probe_desc"],metric)
-        end
-      end # of 'keys_array.each do |keystr|'
-      ctr = ctr + 1
-    end # of 'while ctr < allprobes.length'
+      end
+      arrayindex = arrayindex + 1
+    end # of 'while arrayindex < numberlive'
+    if $debug == true
+      puts "\n\nexecutions times : \n"
+      ctr = 0
+      while ctr < $timed_calls
+        puts $times[ctr].to_s + "\n"
+        ctr = ctr + 1
+      end
+    end
   else
     puts "No systems found\n"
-  end # of 'if allprobes != nil'
+  end # of 'filteredprobes != nil
 end
