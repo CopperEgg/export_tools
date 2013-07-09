@@ -22,10 +22,10 @@ These ruby scripts and associated library scripts are based on :
 All development and testing to date has been done with ruby-1.9.3.
 
 * [CopperEgg API](http://dev.copperegg.com/)
-* [typhoeus/eton](https://github.com/typhoeus/ethon)
+* [typhoeus/ethon](https://github.com/typhoeus/ethon)
 
 ## Recent Updates
-* vesion 1.1.0 released 3-25-2013
+* version 1.1.0 released 3-25-2013
   - added more time interval options
   - changed interface to local time
   - added support for selecting systems or probes by tag
@@ -38,7 +38,7 @@ All development and testing to date has been done with ruby-1.9.3.
 ###Clone this repository.
 
 ```ruby
-git clone http://git@github.com:sjohnsoncopperegg/export_tools.git
+git clone https://github.com/CopperEgg/export_tools.git
 ```
 
 ###Run the Bundler
