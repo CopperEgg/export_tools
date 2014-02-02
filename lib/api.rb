@@ -79,7 +79,6 @@ def httpget(apikey,url,params)
         if $verbose == true
           puts "\nGet API call timed-out\n"
         end
-
       when 200
         probedata = valid_json?(easy.response_body)
         if probedata == nil
@@ -96,8 +95,10 @@ def httpget(apikey,url,params)
         end
         return probedata
       else
-        puts "\nGet: HTTP error returned: " + easy.response_code.to_s + "\n"
-        return nil
+        if $verbose == true
+          puts "\nGet: HTTP error returned: " + easy.response_code.to_s + "\n"
+        end
+        #return nil
       end # of switch statement
     rescue Exception => e
       exception_try_count += 1

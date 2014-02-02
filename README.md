@@ -25,6 +25,9 @@ All development and testing to date has been done with ruby-1.9.3.
 * [typhoeus/ethon](https://github.com/typhoeus/ethon)
 
 ## Recent Updates
+* version 1.1.1 released 2-2-2014
+  - added retries to HTTP GET requests in api.rb
+
 * version 1.1.0 released 3-25-2013
   - added more time interval options
   - changed interface to local time
