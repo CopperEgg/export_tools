@@ -57,6 +57,7 @@ def probedata_to_csv(row_array,probename)
 
     probename.gsub!('/','_')
     probename.gsub!('\\','_')
+    probename.gsub!(':','_')
     fname = $output_path.to_s+"/"+probename.to_s+".csv"
     if $verbose == true
       puts "Writing to "+fname.to_s+"\n\n"
@@ -158,7 +159,10 @@ def parse_probe_samples(_apikey, _id, _probename, _stations, _keys, ts, te, ss)
     bucketoff = Array.new
     bucketcnt = 0
     off = 0
-    t = ts
+# 4-21-2014
+#        Handle the case where the instance data begins AFTER the start time
+#       t = ts
+        t = base_time
 
     while t <= te
       buckets[bucketcnt] = t
