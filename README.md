@@ -25,6 +25,9 @@ All development and testing to date has been done with ruby-1.9.3.
 * [typhoeus/ethon](https://github.com/typhoeus/ethon)
 
 ## Recent Updates
+* version 1.2.0 released 4-21-2014  
+  - no longer assume that the data returned starts with the time and date requested for system or probe data.
+
 * version 1.1.1 released 2-2-2014
   - added retries to HTTP GET requests in api.rb
 
