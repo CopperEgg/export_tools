@@ -131,7 +131,7 @@ def syssamples_tocsv(_apikey, _uuid, _systemname, _keys, ts, te, ss)
       onesystem = Hash.new
       onesystem = systemdata[0]
 
-      if (onesystem["_ts"] == nil) || (onesystem["_bs"] == nil)
+     if (onesystem["_ts"] == nil) || (onesystem["_bs"] == nil)
         if $debug == true
           puts "_ts or _bs was nil. Skipping this system\n"
         end
@@ -150,7 +150,11 @@ def syssamples_tocsv(_apikey, _uuid, _systemname, _keys, ts, te, ss)
         bucketoff = Array.new       # contains offsets indexed from 0 to numentries - 1
         bucketcnt = 0
         off = 0
-        t = ts
+
+# 4-21-2014
+#        Handle the case where the instance data begins AFTER the start time
+#       t = ts
+        t = base_time
 
         while t <= te
           buckets[bucketcnt] = t
