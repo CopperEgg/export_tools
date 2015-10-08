@@ -16,10 +16,10 @@ def format_row(row)
   row.delete("attr_description")
   row.delete("obj_idv")
   row["short_msg"] = row["short_msg"].gsub(',','_')
-  row["created_at"] = Time.at(row["created_at"])
-  row["updated_at"] = Time.at(row["updated_at"])
-  row["cleared_at"] = Time.at(row["cleared_at"])
-  row["notified_at"] = Time.at(row["notified_at"])
+  row["created_at"] = row["created_at"]==0 ? " ": Time.at(row["created_at"])
+  row["updated_at"] = row["updated_at"]==0 ? " ": Time.at(row["updated_at"])
+  row["cleared_at"] = row["cleared_at"]==0 ? " ": Time.at(row["cleared_at"])
+  row["notified_at"] = row["notified_at"]==0 ? " ": Time.at(row["notified_at"])
   row.values
 end
 
