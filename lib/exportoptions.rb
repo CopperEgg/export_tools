@@ -49,39 +49,39 @@ class ExportOptions
         $output_path =  options.outpath
       end
 
-      if (switch == 'sysdata') || (switch == 'probedata')
+      if (switch == 'sysdata') || (switch == 'probedata' || (switch=='issue'))
 
-        opts.on("-u", "--UUID [IDENTIFIER]" , String, "The UUID of the system or probe whose data to export.",
+        unless switch=='issue'
+          opts.on("-u", "--UUID [IDENTIFIER]" , String, "The UUID of the system or probe whose data to export.",
                         "Should not be used wth the -t option.") do |op|
-          options.monitor = op.to_s
-        end
-
-        opts.on("-t", "--tagstring [TAG]" , String, "Return data from the systems or probes with this tag.",
-                      "If not entered, data from all systems / probes will be exported." ) do |op|
-          options.tag = op.to_s
-        end
-
-        opts.on("-i", "--interval [INTERVAL]", String,[:ytd, :pcm, :mtd, :last1d, :last7d, :last30d, :last60d, :last90d, :last6m, :last12m],
-                "Select interval (ytd, pcm, mtd, last1d, last7d, last30d, last60d, last90d, last6m, last12m)",
-                " ytd (year-to-date), pcm (previous calendar month), lastXd (last x days)") do |i|
-          options.interval = i
+            options.monitor = op.to_s
           end
 
+          opts.on("-t", "--tagstring [TAG]" , String, "Return data from the systems or probes with this tag.",
+                      "If not entered, data from all systems / probes will be exported." ) do |op|
+            options.tag = op.to_s
+          end
+          # Specify sample time override
+          opts.on("-s", "--sample_size [SECONDS]", Integer, "Override default sample size") do |ss|
+            options.sample_size_override = ss
+          end
+          opts.on("-i", "--interval [INTERVAL]", String,[:ytd, :pcm, :mtd, :last1d, :last7d, :last30d, :last60d, :last90d, :last6m, :last12m],
+                  "Select interval (ytd, pcm, mtd, last1d, last7d, last30d, last60d, last90d, last6m, last12m)",
+                  " ytd (year-to-date), pcm (previous calendar month), lastXd (last x days)") do |i|
+            options.interval = i
+          end
+        end
+
         opts.on("-b", "--begin [DATE]" , String, "Begin time of exported data. %Y-%m-%d %H:%M",
-                        "For example, -b 2013-1-1 00:00  Your entry should be in you local time",
+                        "For example, -b 2013-1-1 00:00  Your entry should be in your local time",
                         "Use this option along with the -e End option. Cannot use this option if -i option is used.")  do |op|
           options.begintime = op.to_s
         end
 
         opts.on("-e", "--end [DATE]" , String, "End time of exported data. %Y-%m-%d %H:%M",
-                        "For example, -e 2013-3-1 00:00  Your entry should be in you local time",
+                        "For example, -e 2013-3-1 00:00  Your entry should be in your local time",
                         "Use this option along with the -b option. Cannot use this option if -i option is used.")  do |op|
           options.endtime = op.to_s
-        end
-
-          # Specify sample time override
-        opts.on("-s", "--sample_size [SECONDS]", Integer, "Override default sample size") do |ss|
-          options.sample_size_override = ss
         end
 
       end
@@ -297,7 +297,7 @@ class ExportOptions
          # p te
          # p te.utc
         rescue
-          puts "\nError parsing endtimetime. Must be formatted like this:  2012-12-15 16:00\n"
+          puts "\nError parsing endtime. Must be formatted like this:  2012-12-15 16:00\n"
           exit
         end
         tend = te.getlocal

@@ -23,6 +23,13 @@ class GetProbes
   end
 end  #  of class
 
+class GetIssues
+  def self.all(apikey,ts,te)
+    url = "https://"+apikey.to_s+":U@api.copperegg.com/v2/alerts/issues.json?begin_time="+ts.to_s+"&end_time="+te.to_s
+    return httpget(apikey,url,{})
+  end
+end  #  of class
+
 class GetSystemSamples
   def self.uuid(_apikey, _uuid, _keys, ts, te, ss)
     keys = _keys

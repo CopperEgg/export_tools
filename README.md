@@ -4,7 +4,7 @@ export_tools
 Ruby scripts for extracting your CopperEgg data to CSV files.
 
 ###Synopsis
-Four utilities are provided:
+Five utilities are provided:
 
   - probeinfo_csvexport.rb.....all probe information (definition and configuration) for all of your monitored RevealUptime probes is retrieved and exported to CSV.
 
@@ -13,6 +13,8 @@ Four utilities are provided:
   - probedata_csvexport.rb.....historical data gathered from your probes is retrieved and exported to CSV.
 
   - sysdata_csvexport.rb.......historical data gathered from your systems is retrieved and exported to CSV.
+
+  - issue_csvexport.rb.......historical data gathered about your issues is retrieved and exported to CSV.
 
 These ruby scripts and associated library scripts are based on :
 * ruby-1.9.3
@@ -90,10 +92,10 @@ Today these options are
 * -i, --interval [INTERVAL]        Select interval (ytd, pcm, mtd, last1d, last7d, last30d, last60d, last90d, last6m, last12m)
                                       ytd (year-to-date), pcm (previous calendar month), lastXd (last x days)
 * -b, --begin [DATE]               Begin time of exported data. %Y-%m-%d %H:%M
-                                     For example, -b 2013-1-1 00:00  Your entry should be in you local time
+                                     For example, -b 2013-1-1 00:00  Your entry should be in your local time
                                      Use this option along with the -e End option. Cannot use this option if -i option is used.
 * -e, --end [DATE]                 End time of exported data. %Y-%m-%d %H:%M
-                                     For example, -e 2013-3-1 00:00  Your entry should be in you local time
+                                     For example, -e 2013-3-1 00:00  Your entry should be in your local time
                                      Use this option along with the -b option. Cannot use this option if -i option is used.
 * -s, --sample_size [SECONDS]      Override default sample size
 *     --metrics x,y,z              Specify list of individual metrics
