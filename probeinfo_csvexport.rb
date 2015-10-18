@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
-# Copyright 2012 CopperEgg Corporation.  All rights reserved.
+# Copyright 2012 IDERA.  All rights reserved.
 #
-# probeinfo_csvexport.rb is a utility to export probe information from CopperEgg to csv.
+# probeinfo_csvexport.rb is a utility to export probe information from Uptime Cloud Monitor to csv.
 #
 #
 #encoding: utf-8

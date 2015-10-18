@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
-# Copyright 2012 CopperEgg Corporation.  All rights reserved.
+# Copyright 2012 IDERA.  All rights reserved.
 #
-# exportoptions.rb is a utility to parse common command line options for the CopperEgg data export tools.
+# exportoptions.rb is a utility to parse common command line options for the Uptime Cloud Monitor data export tools.
 #
 #
 #encoding: utf-8
