@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
-# Copyright 2012,2013 CopperEgg Corporation.  All rights reserved.
+# Copyright 2012,2013 IDERA.  All rights reserved.
 #
-# sysdata_export.rb is a utility to export system data from CopperEgg to csv.
+# sysdata_export.rb is a utility to export system data from Uptime Cloud Monitor to csv.
 #
 #
 #encoding: utf-8

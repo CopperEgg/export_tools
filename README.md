@@ -1,7 +1,7 @@
 export_tools
 =============
 
-Ruby scripts for extracting your CopperEgg data to CSV files.
+Ruby scripts for extracting your Uptime Cloud Monitor data to CSV files.
 
 ###Synopsis
 Five utilities are provided:
@@ -18,12 +18,12 @@ Five utilities are provided:
 
 These ruby scripts and associated library scripts are based on :
 * ruby-1.9.3
-* The CopperEgg API
+* The Uptime Cloud Monitor API
 * Ethon
 
 All development and testing to date has been done with ruby-1.9.3.
 
-* [CopperEgg API](http://dev.copperegg.com/)
+* [Uptime Cloud Monitor API](http://dev.copperegg.com/)
 * [typhoeus/ethon](https://github.com/typhoeus/ethon)
 
 ## Recent Updates
@@ -60,7 +60,7 @@ bundle
 ```ruby
 ruby sysinfo_csvexport.rb APIKEY [options]
 ```
-Substitute APIKEY with your CopperEgg User API key. Find it as follows:
+Substitute APIKEY with your Uptime Cloud Monitor User API key. Find it as follows:
 Settings tab -> Personal Settings -> User API Access
 
 Your command line will appear as follows:
@@ -169,7 +169,7 @@ One CSV file is created for all metrics specified, for each system or probe moni
 
 (The MIT License)
 
-Copyright © 2012, 2013 [CopperEgg Corporation](http://copperegg.com)
+Copyright © 2012, 2013 [IDERA](http://idera.com)
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),

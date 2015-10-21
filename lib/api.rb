@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
-# Copyright 2012,2013 CopperEgg Corporation.  All rights reserved.
+# Copyright 2012,2013 IDERA.  All rights reserved.
 #
 #
 #encoding: utf-8
