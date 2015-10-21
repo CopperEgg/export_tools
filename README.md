@@ -60,7 +60,7 @@ bundle
 ```ruby
 ruby sysinfo_csvexport.rb APIKEY [options]
 ```
-Substitute APIKEY with your CopperEgg User API key. Find it as follows:
+Substitute APIKEY with your Uptime Cloud Monitor User API key. Find it as follows:
 Settings tab -> Personal Settings -> User API Access
 
 Your command line will appear as follows:
@@ -169,7 +169,7 @@ One CSV file is created for all metrics specified, for each system or probe moni
 
 (The MIT License)
 
-Copyright © 2012, 2013 [CopperEgg Corporation](http://copperegg.com)
+Copyright © 2012, 2013 [IDERA](http://idera.com)
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
