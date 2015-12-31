@@ -27,7 +27,7 @@ All development and testing to date has been done with ruby-1.9.3.
 * [typhoeus/ethon](https://github.com/typhoeus/ethon)
 
 ## Recent Updates
-* version 1.2.1 released 31231-2015
+* version 1.2.1 released 12-31-2015
   - added issue_csvexport.rb which fetches issues based on provided parameters
   - at most 200 issues can be fetched in one API call, even if you give a value > 200, it will get 200 only.
 
