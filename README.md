@@ -123,8 +123,11 @@ ruby issue_csvexport.rb 3xgKHK1jC5OH0loS -b "2015-1-1 00:00" -p20 -n2
 ```
 
 3xgKHK1jC5OH0loS = APIKEY
+
 2015-1-1 00:00   = Begin Time
+
 20               = Per page
+
 2                = Page number
 
 So, this call with return second page of 20 issues (issue list 21 - 40) from the complete list of issues from '1st January 2015' to 'today'.
