@@ -27,6 +27,10 @@ All development and testing to date has been done with ruby-1.9.3.
 * [typhoeus/ethon](https://github.com/typhoeus/ethon)
 
 ## Recent Updates
+* version 1.2.1 released 12-31-2015
+  - added issue_csvexport.rb which fetches issues based on provided parameters
+  - at most 200 issues can be fetched in one API call, even if you give a value > 200, it will get 200 only.
+
 * version 1.2.0 released 4-21-2014  
   - no longer assume that the data returned starts with the time and date requested for system or probe data.
 
@@ -107,6 +111,26 @@ Today these options are
 
 * -h, --help                       Show this message
 
+Two options specifically added for issue_csvexport.rb
+
+* -p, --per_page [INTEGER]         No. of issues to be fetched in a page (in one call). Maximum is 200.
+* -n, --page_number [INTEGER]      The number of results you would like to get in one call. Maximum and default value is 200
+
+Example for fetching paginated result for issues
+
+```ruby
+ruby issue_csvexport.rb 3xgKHK1jC5OH0loS -b "2015-1-1 00:00" -p20 -n2
+```
+
+3xgKHK1jC5OH0loS = APIKEY
+
+2015-1-1 00:00   = Begin Time
+
+20               = Per page
+
+2                = Page number
+
+So, this call with return second page of 20 issues (issue list 21 - 40) from the complete list of issues from '1st January 2015' to 'today'.
 
 ### Output Path
 The CSV file will be written to the current directory ("./"), with the filename 'hostname.csv' or 'probename.csv'.
