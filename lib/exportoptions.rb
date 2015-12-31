@@ -36,6 +36,8 @@ class ExportOptions
     options.apikey = ""
     options.verbose = false
     options.debug = false
+    options.per_page = 200
+    options.page_number = 1
     options.sample_size_override = 0      # max is 86400
 
     opts = OptionParser.new do |opts|
@@ -69,6 +71,14 @@ class ExportOptions
                   "Select interval (ytd, pcm, mtd, last1d, last7d, last30d, last60d, last90d, last6m, last12m)",
                   " ytd (year-to-date), pcm (previous calendar month), lastXd (last x days)") do |i|
             options.interval = i
+          end
+        else
+          opts.on("-n", "--page_number [INTEGER]" , Integer, "The page number of the paginated result" ) do |op|
+            options.page_number = op
+          end
+          opts.on("-p", "--per_page [INTEGER]" , Integer, "The number of results you would like to get in one call. Maximum " +
+            "and default value is 200") do |op|
+            options.per_page = op
           end
         end
 

@@ -77,7 +77,8 @@ puts $VersionString
 
 $t_start = Time.new(options.start_year,options.start_month,options.start_day,options.start_hour,options.start_min,options.start_sec)
 $t_end = Time.new(options.end_year,options.end_month,options.end_day,options.end_hour,options.end_min,options.end_sec)
-issues = GetIssues.all($APIKEY,$t_start.utc.to_i,$t_end.utc.to_i)
+
+issues = GetIssues.all($APIKEY, $t_start.utc.to_i, $t_end.utc.to_i, options.per_page, options.page_number)
 
 unless issues == nil
   issues_to_csv(issues)
