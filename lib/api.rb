@@ -25,7 +25,7 @@ end  #  of class
 
 class GetIssues
   def self.all(apikey,ts,te,per_page,page_number)
-    url = "http://"+apikey.to_s+":U@api.cuegglocal.com/v2/alerts/issues.json?begin_time=" + ts.to_s + "&end_time=" +
+    url = "http://"+apikey.to_s+":U@api.copperegg.com/v2/alerts/issues.json?begin_time=" + ts.to_s + "&end_time=" +
       te.to_s + "&per_page=" + per_page.to_s + "&page_number=" + page_number.to_s
     return httpget(apikey,url,{})
   end
