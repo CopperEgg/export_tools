@@ -39,6 +39,8 @@ end
 #   which may contain several sets of metric keys
 #
 def syssamples_tocsv(_apikey, _uuid, _systemname, _keys, ts, te, ss)
+  _systemname = _uuid if _systemname.nil?
+
   begin
     simple_syskeys = {"h" => ["health index", "health state", "uptime state", "blocked state", "load state", "cpu state", "memory state", "state on last update", "filesystem health index",  "filesystem state"],
                       "r" => ["running procs"],
@@ -488,7 +490,7 @@ if options != nil
   ss = options.sample_size_override
 
   if options.metrics == nil
-    keys = "h,r,b,l,m,s,s_c,s_f,s_d,s_i,p"
+    keys = "h"
   else
     keys = ""
     options.metrics.each do |more|

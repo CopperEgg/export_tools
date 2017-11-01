@@ -3,23 +3,23 @@ export_tools
 
 Ruby scripts for extracting your Uptime Cloud Monitor data to CSV files.
 
-###Synopsis
+### Synopsis
 Five utilities are provided:
 
-  - probeinfo_csvexport.rb.....all probe information (definition and configuration) for all of your monitored RevealUptime probes is retrieved and exported to CSV.
+  - probeinfo_csvexport.rb - All probe information (definition and configuration) for all of your monitored RevealUptime probes is retrieved and exported to CSV.
 
-  - sysinfo_csvexport.rb.......all system information (definition and configuration) for all of your monitored RevealCloud systems is retrieved and exported to CSV.
+  - sysinfo_csvexport.rb - All system information (definition and configuration) for all of your monitored RevealCloud systems is retrieved and exported to CSV.
 
-  - probedata_csvexport.rb.....historical data gathered from your probes is retrieved and exported to CSV.
+  - probedata_csvexport.rb - Historical data gathered from your probes is retrieved and exported to CSV.
 
-  - sysdata_csvexport.rb.......historical data gathered from your systems is retrieved and exported to CSV.
+  - sysdata_csvexport.rb - Historical data gathered from your systems is retrieved and exported to CSV.
 
-  - issue_csvexport.rb.......historical data gathered about your issues is retrieved and exported to CSV.
+  - issue_csvexport.rb - Historical data gathered about your issues is retrieved and exported to CSV.
 
 These ruby scripts and associated library scripts are based on :
 * ruby-1.9.3
 * The Uptime Cloud Monitor API
-* Ethon
+* Ethon gem
 
 All development and testing to date has been done with ruby-1.9.3.
 
@@ -27,11 +27,17 @@ All development and testing to date has been done with ruby-1.9.3.
 * [typhoeus/ethon](https://github.com/typhoeus/ethon)
 
 ## Recent Updates
+
+* version 1.2.2 released 10-31-2017
+  - For server, default metric is only health when no metric is specified.
+  - Fixed a bug with with 'last12m' interval - This filter wasn't working earlier.
+  - Fixed a bug with exporting a server data whose name was nil. The name of the file for such a server would be <uuid>.csv.
+
 * version 1.2.1 released 12-31-2015
   - added issue_csvexport.rb which fetches issues based on provided parameters
   - at most 200 issues can be fetched in one API call, even if you give a value > 200, it will get 200 only.
 
-* version 1.2.0 released 4-21-2014  
+* version 1.2.0 released 4-21-2014
   - no longer assume that the data returned starts with the time and date requested for system or probe data.
 
 * version 1.1.1 released 2-2-2014
@@ -47,13 +53,13 @@ All development and testing to date has been done with ruby-1.9.3.
 
 ## Installation
 
-###Clone this repository.
+### Clone this repository.
 
 ```ruby
 git clone https://github.com/CopperEgg/export_tools.git
 ```
 
-###Run the Bundler
+### Run the Bundler
 
 ```ruby
 bundle
@@ -79,43 +85,44 @@ The available options can be found by typing in the following on your command li
 ```ruby
 ruby sysinfo_csvexport.rb -h
 ```
-
+```
 Today these options are
 
-* -o, --output_path                Path to write .csv files
-* -s, --sample_size [SECONDS]      Override default sample size
-* -i, --interval [INTERVAL]        Select interval (ytd, pcm, mtd,...)
-* -v, --verbose                    Run verbosely
-* -h, --help                       See complete list and description of command line options
+ -o, --output_path                Path to write .csv files
+ -s, --sample_size [SECONDS]      Override default sample size
+ -i, --interval [INTERVAL]        Select interval (ytd, pcm, mtd,...)
+ -v, --verbose                    Run verbosely
+ -h, --help                       See complete list and description of command line options
 
-* -o, --outputpath [PATH]          Path to write CSV files
-* -u, --UUID [IDENTIFIER]          The UUID of the system or probe whose data to export.
+ -o, --outputpath [PATH]          Path to write CSV files
+ -u, --UUID [IDENTIFIER]          The UUID of the system or probe whose data to export.
                                      Should not be used wth the -t option.
-* -t, --tagstring [TAG]            Return data from the systems or probes with this tag.
+ -t, --tagstring [TAG]            Return data from the systems or probes with this tag.
                                      If not entered, data from all systems / probes will be exported.
-* -i, --interval [INTERVAL]        Select interval (ytd, pcm, mtd, last1d, last7d, last30d, last60d, last90d, last6m, last12m)
+ -i, --interval [INTERVAL]        Select interval (ytd, pcm, mtd, last1d, last7d, last30d, last60d, last90d, last6m, last12m)
                                       ytd (year-to-date), pcm (previous calendar month), lastXd (last x days)
-* -b, --begin [DATE]               Begin time of exported data. %Y-%m-%d %H:%M
+ -b, --begin [DATE]               Begin time of exported data. %Y-%m-%d %H:%M
                                      For example, -b 2013-1-1 00:00  Your entry should be in your local time
                                      Use this option along with the -e End option. Cannot use this option if -i option is used.
-* -e, --end [DATE]                 End time of exported data. %Y-%m-%d %H:%M
+ -e, --end [DATE]                 End time of exported data. %Y-%m-%d %H:%M
                                      For example, -e 2013-3-1 00:00  Your entry should be in your local time
                                      Use this option along with the -b option. Cannot use this option if -i option is used.
-* -s, --sample_size [SECONDS]      Override default sample size
-*     --metrics x,y,z              Specify list of individual metrics
-                                     h,r,b,l,m,s,c,n,d,f,p default is all
+ -s, --sample_size [SECONDS]      Override default sample size
+     --metrics x,y,z              Specify list of individual metrics
+                                     h,r,b,l,m,s,c,n,d,f,p default is all for probes and only health for servers
                                      h (health), r (running procs), b (blocked procs), l (load), m (memory)
                                      s (swap), c (cpu), n (network io), d (disk io), f (filesystems), p (processes)
-* -v, --verbose                    Run verbosely
-* -d, --debug                      Run with debug output
+ -v, --verbose                    Run verbosely
+ -d, --debug                      Run with debug output
 
-* -h, --help                       Show this message
+ -h, --help                       Show this message
+```
 
 Two options specifically added for issue_csvexport.rb
-
-* -p, --per_page [INTEGER]         No. of issues to be fetched in a page (in one call). Maximum is 200.
-* -n, --page_number [INTEGER]      The number of results you would like to get in one call. Maximum and default value is 200
-
+```
+-p, --per_page [INTEGER]         No. of issues to be fetched in a page (in one call). Maximum is 200.
+-n, --page_number [INTEGER]      The number of results you would like to get in one call. Maximum and default value is 200
+```
 Example for fetching paginated result for issues
 
 ```ruby

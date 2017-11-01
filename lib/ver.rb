@@ -4,6 +4,6 @@
 #
 #encoding: utf-8
 
-$version = '1.2.0'
-$ReleaseDate = '4-21-2014'
+$version = '1.2.2'
+$ReleaseDate = '10-31-2017'
 $VersionString = "Uptime Cloud Monitor export_tools version " + $version + "; released " + $ReleaseDate.to_s + "\n\n"
