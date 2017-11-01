@@ -510,7 +510,7 @@ if options != nil
   puts  "Requesting data from " + tstart.utc.to_s + " to " + tend.utc.to_s + "\n"
   puts  "Selected keys : "+keys+"\n"
   if ss == 0
-    puts "Using defalt sample size\n"
+    puts "Using default sample size\n"
   else
     puts "Sample size override is " + options.sample_size_override.to_s + "\n"
  end
@@ -572,7 +572,7 @@ if options != nil
             else
               hostname = hostname+"-"+uuid
             end
-            puts "uuid is " + uuid.to_s + "\n"
+            puts "[#{arrayindex + 1}/#{numberlive}] uuid is #{uuid}\n"
             tmpresult = syssamples_tocsv($APIKEY, uuid, attrs["n"],keys, ts, te, ss)
             if tmpresult == false
               exit

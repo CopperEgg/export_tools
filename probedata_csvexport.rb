@@ -317,7 +317,7 @@ if options != nil
   puts  "Requesting data from " + tstart.utc.to_s + " to " + tend.utc.to_s + "\n"
   puts  "Selected keys : "+keys+"\n"
   if ss == 0
-    puts "Using defalt sample size\n"
+    puts "Using default sample size\n"
   else
     puts "Sample size override is " + options.sample_size_override.to_s + "\n"
   end
@@ -361,6 +361,7 @@ if options != nil
       end
       row_array =  parse_probe_samples($APIKEY, this_probe["id"], this_probe["probe_desc"], this_probe["stations"], keys, ts, te, ss)
       if row_array != nil && row_array.empty? == false
+        puts "[#{arrayindex + 1}/#{numberlive}] Name : #{this_probe["probe_desc"]}\n"
         tmpresult = probedata_to_csv(row_array,this_probe["probe_desc"])
       else
         if $debug == true

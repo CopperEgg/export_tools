@@ -98,7 +98,7 @@ class ExportOptions
 
       if switch == 'sysdata'
         opts.on("--metrics x,y,z", Array, "Specify list of individual metrics",
-                      "h,r,b,l,m,s,c,n,d,f,p default is all for probes and only health for servers",
+                      "h,r,b,l,m,s,c,n,d,f,p. Default is all for probes and only health for servers. Following are the metrics",
                       "h (health), r (running procs), b (blocked procs), l (load), m (memory)",
                       "s (swap), c (cpu), n (network io), d (disk io), f (filesystems), p (processes)") do |singles|
           options.metrics = singles
