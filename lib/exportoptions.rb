@@ -98,7 +98,7 @@ class ExportOptions
 
       if switch == 'sysdata'
         opts.on("--metrics x,y,z", Array, "Specify list of individual metrics",
-                      "h,r,b,l,m,s,c,n,d,f,p default is all",
+                      "h,r,b,l,m,s,c,n,d,f,p. Default is all for probes and only health for servers. Following are the metrics",
                       "h (health), r (running procs), b (blocked procs), l (load), m (memory)",
                       "s (swap), c (cpu), n (network io), d (disk io), f (filesystems), p (processes)") do |singles|
           options.metrics = singles
@@ -236,8 +236,8 @@ class ExportOptions
         options.end_month = now.month
         options.start_day = 1           # leave start hours, min and seconds at 0
         options.end_day = 1             # leave end hours, min and sec at 0
-        options.start_year = now.year
-        options.end_year = now.year-1
+        options.start_year = now.year-1
+        options.end_year = now.year
         if $verbose == true
           puts "Retrieving data for the past 12 months\n"
         end
