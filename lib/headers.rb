@@ -3,17 +3,15 @@
 #
 # sysdata_export.rb is a utility to export system data from Uptime Cloud Monitor to csv.
 #
-#
-#encoding: utf-8
+# encoding: utf-8
 
 
 class CSVHeaders
-
   def self.create(type,sample_cats,names,first)
     begin
       row = Array.new
       if first == true
-        row[0] = "Date & Time (local)"
+        row[0] = 'Date & Time (local)'
         rowindex = 1
       else
         rowindex = 0
