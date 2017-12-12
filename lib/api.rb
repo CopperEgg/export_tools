@@ -1,57 +1,57 @@
 #!/usr/bin/env ruby
 # Copyright 2012,2013 IDERA.  All rights reserved.
 #
-#
-#encoding: utf-8
+# encoding: utf-8
 
 require 'ethon'
 
-
 class GetSystems
   def self.all(apikey)
-    url = "https://"+apikey.to_s+":U@api.copperegg.com/v2/revealcloud/systems.json"
-    return httpget(apikey,url,{})
+    url = "https://#{apikey}:U@api.copperegg.com/v2/revealcloud/systems.json"
+    return httpget(apikey, url, {})
   end
-end  #  of class
+end
 
 
 class GetProbes
   def self.all(apikey)
-    url = "https://"+apikey.to_s+":U@api.copperegg.com/v2/revealuptime/probes.json"
-    return httpget(apikey,url,{})
+    url = "https://#{apikey}:U@api.copperegg.com/v2/revealuptime/probes.json"
+    return httpget(apikey, url, {})
 
   end
-end  #  of class
+end
 
 class GetIssues
-  def self.all(apikey,ts,te,per_page,page_number)
-    url = "https://"+apikey.to_s+":U@api.copperegg.com/v2/alerts/issues.json?begin_time=" + ts.to_s + "&end_time=" +
-      te.to_s + "&per_page=" + per_page.to_s + "&page_number=" + page_number.to_s
-    return httpget(apikey,url,{})
+  def self.all(apikey, ts, te, per_page, page_number)
+    url = "https://#{apikey}:U@api.copperegg.com/v2/alerts/issues.json?begin_time=#{ts}&end_time=" +
+          "#{te}&per_page=#{per_page}&page_number=#{page_number}"
+    return httpget(apikey, url, {})
   end
-end  #  of class
+end
 
 class GetSystemSamples
   def self.uuid(_apikey, _uuid, _keys, ts, te, ss)
     keys = _keys
-    url = "https://"+_apikey.to_s+":U@api.copperegg.com/v2/revealcloud/samples.json?uuids="+_uuid.to_s+"&keys="+keys.to_s+"&starttime="+ts.to_s+"&endtime="+te.to_s
+    url = "https://#{_apikey}:U@api.copperegg.com/v2/revealcloud/samples.json?uuids=#{_uuid}&keys=#{keys}&starttime=" +
+          "#{ts}&endtime=#{te}"
     if ss != 0
-      url = url+ "&sample_size="+ss.to_s
+      url = "#{ur}l&sample_size=#{ss}"
     end
-    return httpget(_apikey,url,{})
+    return httpget(_apikey, url, {})
   end
-end  #  of class
+end
 
 class GetProbeSamples
   def self.probeid(_apikey, _id, _keys, ts, te, ss)
     keys = _keys
-    url = "https://"+_apikey.to_s+":U@api.copperegg.com/v2/revealuptime/samples.json?ids="+_id.to_s+"&keys="+keys.to_s+"&starttime="+ts.to_s+"&endtime="+te.to_s
+    url = "https://#{_apikey}:U@api.copperegg.com/v2/revealuptime/samples.json?ids=#{_id}&keys=#{keys}&starttime=" +
+          "#{ts}&endtime=#{te}"
     if ss != 0
-      url = url + "&sample_size="+ss.to_s
+      url = "#{ur}l&sample_size=#{ss}"
     end
-    return httpget(_apikey,url,{})
+    return httpget(_apikey, url, {})
   end
-end  #  of class
+end
 
 def valid_json? json_
   begin
@@ -60,7 +60,6 @@ def valid_json? json_
     return nil
   end
 end
-# now with ethon!
 
 def httpget(apikey,url,params)
   attempts = 3
@@ -74,12 +73,12 @@ def httpget(apikey,url,params)
   while connect_try_count < attempts
     begin
       easy.http_request( url, :get, {
-         :headers => {"Accept" => "application/json","Content-Type" => "application/json"},
-         :ssl_verifypeer => false,
-         :followlocation => true,
-         :verbose => do_verbose,
-         :timeout => $Max_Timeout
-        } )
+       headers: {'Accept' => 'application/json','Content-Type' => 'application/json'},
+       ssl_verifypeer: false,
+       followlocation: true,
+       verbose: do_verbose,
+       timeout: $Max_Timeout
+       } )
       easy.perform
 
       case easy.response_code
@@ -104,14 +103,12 @@ def httpget(apikey,url,params)
         return probedata
       else
         if $verbose == true
-          puts "\nGet: HTTP error returned: " + easy.response_code.to_s + "\n"
+          puts "\nGet: HTTP error returned: " + easy.response_body.to_s + "\n"
         end
-        #return nil
-      end # of switch statement
+      end
     rescue Exception => e
       exception_try_count += 1
       if exception_try_count > attempts
-        #log "#{e.inspect}"
         raise e
         if $verbose == true
           puts "\nGet: exceeded retries\n"
@@ -123,11 +120,11 @@ def httpget(apikey,url,params)
       end
       sleep 0.5
     retry
-    end  # of begin rescue end
+    end
     connect_try_count += 1
     if $verbose == true
       puts "Retrying\n"
     end
     sleep 0.5
-  end # of while connect_try_count < attempts
-end  #  of httpget
+  end
+end

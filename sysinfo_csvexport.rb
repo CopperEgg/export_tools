@@ -3,20 +3,18 @@
 #
 # sysinfo_csvexport.rb is a utility to export system information from Uptime Cloud Monitor to csv.
 #
-#
-#encoding: utf-8
+# encoding: utf-8
 
 require 'rubygems'
 require "json/pure"
 require 'csv'
-#require 'FileUtils'
 require './lib/ver'
 require './lib/exportoptions'
 require './lib/api'
 require './lib/filters'
 
-$output_path = "."
-$APIKEY = ""
+$output_path = '.'
+$APIKEY = ''
 $outpath_setup = false
 $verbose = false
 $debug = false
@@ -42,44 +40,47 @@ end
 def sysinfo_to_csv(allsystems)
   begin
     if $debug == true
-      puts "At start of sysinfo_to_csv and output path is "+$output_path.to_s+"\n"
+      puts "At start of sysinfo_to_csv and output path is #{$output_path}\n"
     end
-    if $outpath_setup == false    # ensure the following happens only once
+    if $outpath_setup == false
       $outpath_setup = true
-      if $output_path != "."
-        if Dir.exists?($output_path.to_s+"/") == false
+      if $output_path != '.'
+        if Dir.exists?("#{$output_path}/") == false
           if $verbose == true
             print "Creating directory..."
-            if Dir.mkdir($output_path.to_s+"/",0775) == -1
+            if Dir.mkdir("#{$output_path}/", 0775) == -1
               print "** FAILED ***\n"
               return false
             else
-              FileUtils.chmod 0775, $output_path.to_s+"/"
+              FileUtils.chmod(0775, "#{$output_path}/")
               print "Success\n"
             end
           else
-            if Dir.mkdir($output_path.to_s+"/",0775) == -1
-              print "FAILED to create directiory "+$output_path.to_s+"/"+"\n"
+            if Dir.mkdir("#{$output_path}/", 0775) == -1
+              print "FAILED to create directiory #{$output_path}/\n"
               return false
             else
-              FileUtils.chmod 0775, $output_path.to_s+"/"
+              FileUtils.chmod(0775, "#{$output_path}/")
             end
           end
-        else  #  the directory exists
-          FileUtils.chmod 0775, $output_path.to_s+"/"       # TODO only modify if needed?
-       end # of 'if Dir.exists?($output_path.to_s+"/") == false'
+        else
+          FileUtils.chmod(0775, "#{$output_path}/")
+       end
       end
     end
-    fname = $output_path.to_s+"/allsystems.csv"
+    fname = "#{$output_path}/allsystems.csv"
     if $verbose == true
-      puts "Writing to "+fname.to_s+"\n\n"
+      puts "Writing to #{fname}\n\n"
     end
-    CSV.open(fname.to_s, "wb") do |csv|
+    CSV.open(fname, 'wb') do |csv|
 
       num_systems = allsystems.length
 
       row0 = Array.new
-      row0 = ["uuid", "hidden", "hostname",	"tags",	"OS",	"OS version",	"collector verison",	"Create Date UTC",	"Last Update UTC", "Created at",	"Last updated",	"health index",	"summary state",	"uptime state",	"blocked state",	"load state",	"cpu state",	"memory state",	"filesystems state" ]
+      row0 = ['uuid', 'hidden', 'hostname',	'tags',	'OS',	'OS version',	'collector verison',
+        'Create Date UTC', 'Last Update UTC', 'Created at',	'Last updated',	'health index',
+        'summary state',	'uptime state',	'blocked state',	'load state',	'cpu state',
+        'memory state',	'filesystems state' ]
       csv << row0
 
       ctr = 0
@@ -88,11 +89,9 @@ def sysinfo_to_csv(allsystems)
       while ctr < num_systems
         row0.clear
         sys = allsystems[ctr]
-        #p sys
-        attr = sys["a"]
-        #p attr
+        attr = sys['a']
         os = nil
-        case attr["o"]
+        case attr['o']
           when 'm'
             os = 'Mac OS X'
           when 'l'
@@ -102,40 +101,36 @@ def sysinfo_to_csv(allsystems)
           when 'f'
             os = 'FreeBSD'
         end
-        if os == nil
-          puts "Unrecognized OS: "+attr["o"]+"\n"
+        if os.nil?
+          puts "Unrecognized OS: #{attr['o']}\n"
           os = "???"
         end
 
-        row0 = [ sys["uuid"].to_s, sys["hid"],  attr["n"], attr["t"], os.to_s, attr["ov"].to_s, attr["rv"].to_s,
-                  Time.at(attr["c"]).utc, Time.at(attr["p"]).utc, attr["c"], attr["p"], attr["h"], state_to_s(attr["s"]),
-                  state_to_s(attr["us"]), state_to_s(attr["bs"]), state_to_s(attr["ls"]), state_to_s(attr["cs"]),
-                  state_to_s(attr["ms"]), state_to_s(attr["fs"])]
+        row0 = [ sys['uuid'], sys['hid'],  attr['n'], attr['t'], os, attr['ov'], attr['rv'],
+                 Time.at(attr['c']).utc, Time.at(attr['p']).utc, attr['c'], attr['p'], attr['h'], state_to_s(attr['s']),
+                 state_to_s(attr['us']), state_to_s(attr['bs']), state_to_s(attr['ls']), state_to_s(attr['cs']),
+                 state_to_s(attr['ms']), state_to_s(attr['fs'])]
         csv << row0
         sys.clear
         attr.clear
         ctr = ctr + 1
-      end # of 'while ctr < num_systems'
-    end # of 'CSV.open(fname.to_s, "w") do |csv|'
+      end
+    end
     return true
   rescue Exception => e
-    puts "sysinfo_to_csv exception ... error is " + e.message + "\n"
+    puts "sysinfo_to_csv exception ... error is #{e.message}\n"
     return false
   end
 end
 
-#
-# This is the main portion of the sysinfo_csvexport.rb utility
-#
-
-options = ExportOptions.parse(ARGV,"Usage: sysinfo_csvexport.rb APIKEY [options]","")
+options = ExportOptions.parse(ARGV, 'Usage: sysinfo_csvexport.rb APIKEY [options]', '')
 puts $VersionString
 
 if options != nil
   tr = Time.now
   trun = Time.new(tr.year,tr.month,tr.day,tr.hour,tr.min,tr.sec)
 
-  puts  "Time and Date of this data export: "+trun.to_s+"\n"
+  puts  "Time and Date of this data export: #{trun}\n"
   numberlive = 0
   allsystems = Array.new
   allsystems = GetSystems.all($APIKEY)
@@ -144,5 +139,5 @@ if options != nil
     sysinfo_to_csv(allsystems)
   else
     puts "No systems found\n"
-  end # of 'if allsystems != nil'
+  end
 end
