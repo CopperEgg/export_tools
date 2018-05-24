@@ -10,7 +10,7 @@ class CSVHeaders
   def self.create(type,sample_cats,names,first)
     begin
       row = Array.new
-      if first == true
+      if first
         row[0] = 'Date & Time (local)'
         rowindex = 1
       else
