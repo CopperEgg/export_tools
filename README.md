@@ -109,9 +109,9 @@ Today these options are
                                      Use this option along with the -b option. Cannot use this option if -i option is used.
  -s, --sample_size [SECONDS]      Override default sample size
      --metrics x,y,z              Specify list of individual metrics
-                                     h,r,b,l,m,s,c,n,d,f,p. Default is all for probes and only health for servers. Following are the metrics
+                                     h,r,b,l,m,s,c,c_d,n,d,f,p. Default is all for probes and only health for servers. Following are the metrics
                                      h (health), r (running procs), b (blocked procs), l (load), m (memory)
-                                     s (swap), c (cpu), n (network io), d (disk io), f (filesystems), p (processes)
+                                     s (swap), c (cpu), c_d (cpu detailed - for pro servers only), n (network io), d (disk io), f (filesystems), p (processes)
  -v, --verbose                    Run verbosely
  -d, --debug                      Run with debug output
 

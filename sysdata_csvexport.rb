@@ -40,57 +40,68 @@ def syssamples_tocsv(_apikey, _uuid, _systemname, _keys, ts, te, ss)
   _systemname = _uuid if _systemname.nil?
 
   begin
-    simple_syskeys = {'h' => ['health index', 'health state', 'uptime state', 'blocked state',
-                              'load state', 'cpu state', 'memory state', 'state on last update',
-                              'filesystem health index', 'filesystem state'],
-                      'r' => ['running procs'],
-                      'b' => ['blocked procs'],
-                      'l' => ['system load'],
-                      'm' => ['buffer memory MB', 'cache memory MB', 'free memory MB', 'used memory MB'],
-                      's' => ['swap used MB', 'swap free MB']
-    }
-    complex_syskeys = {'s_c' => ['active', 'iowait', 'user', 'nice', 'system', 'irq', 'softirq', 'steal', 'guest'],
-                       's_i' => ['rx KB/s average', 'tx KB/s average'],
-                       's_f' => ['used Gbytes', 'free Gbytes'],
-                       's_d' => ['reads  KB/s', 'writes  KB/s']
+    simple_syskeys = {
+        'h' => ['health index', 'health state', 'uptime state', 'blocked state', 'load state', 'cpu state',
+                'memory state', 'state on last update', 'filesystem health index', 'filesystem state'],
+        'r' => ['running procs'],
+        'b' => ['blocked procs'],
+        'l' => ['system load'],
+        'm' => ['buffer memory MB', 'cache memory MB', 'free memory MB', 'used memory MB'],
+        's' => ['swap used MB', 'swap free MB'],
+        'c' => ['active', 'iowait', 'user', 'nice', 'system', 'irq', 'softirq', 'steal', 'guest']
     }
 
-    proc_syskeys = {'p' => ['name', 'cmd line', 'PID', 'UID', 'state', 'CPU % User', 'CPU % System',
-                            'CPU % Total', 'internal', 'Memory Virtual', 'Memory Resident', 'internal'],
-                    'u' => ['User UID', 'CPU % User', 'CPU % System', 'CPU % Total', 'internal use',
-                            'Memory Virtual', 'Memory Resident', 'Internal Use']
+    complex_syskeys = {
+        's_c' => ['active', 'iowait', 'user', 'nice', 'system', 'irq', 'softirq', 'steal', 'guest'],
+        's_i' => ['rx KB/s average', 'tx KB/s average'],
+        's_f' => ['used Gbytes', 'free Gbytes'],
+        's_d' => ['reads  KB/s', 'writes  KB/s']
     }
 
-    simple_numcats = {'h' => 10,
-                      'r' => 1,
-                      'b' => 1,
-                      'l' => 1,
-                      'm' => 4,
-                      's' => 2
-    }
-    complex_numcats = {'s_c' => 9,
-                       's_i' => 2,
-                       's_f' => 2,
-                       's_d' => 2
+    proc_syskeys = {
+        'p' => ['name', 'cmd line', 'PID', 'UID', 'state', 'CPU % User', 'CPU % System',
+                'CPU % Total', 'internal', 'Memory Virtual', 'Memory Resident', 'internal'],
+        'u' => ['User UID', 'CPU % User', 'CPU % System', 'CPU % Total', 'internal use',
+                'Memory Virtual', 'Memory Resident', 'Internal Use']
     }
 
-    proc_numcats = {'p' => 12,
-                    'u' => 8
+    simple_numcats = {
+        'h' => 10,
+        'r' => 1,
+        'b' => 1,
+        'l' => 1,
+        'm' => 4,
+        's' => 2,
+        'c' => 9
     }
 
-
-    keysto_strings = {'h' => 'health',
-                      'r' => 'run-procs',
-                      'b' => 'block-procs',
-                      'l' => 'sys-load',
-                      'm' => 'memory',
-                      's' => 'swap',
-                      's_c' => 'cpu',
-                      's_i' => 'net',
-                      's_f' => 'filesys',
-                      's_d' => 'diskio',
-                      'p' => 'procs'
+    complex_numcats = {
+        's_c' => 9,
+        's_i' => 2,
+        's_f' => 2,
+        's_d' => 2
     }
+
+    proc_numcats = {
+        'p' => 12,
+        'u' => 8
+    }
+
+    keysto_strings = {
+        'h' => 'health',
+        'r' => 'run-procs',
+        'b' => 'block-procs',
+        'l' => 'sys-load',
+        'm' => 'memory',
+        's' => 'swap',
+        'c' => 'cpu',
+        's_c' => 'cpu',
+        's_i' => 'net',
+        's_f' => 'filesys',
+        's_d' => 'diskio',
+        'p' => 'procs'
+    }
+
     row_array = Array.new
     firstpass = true
 
@@ -192,7 +203,7 @@ def syssamples_tocsv(_apikey, _uuid, _systemname, _keys, ts, te, ss)
               end
 
               val = samples[bucketoff[arrayctr].to_s]
-              if val.is_a?(Array) != true
+              unless val.is_a?(Array)
                 tmpa = Array.new
                 tmpa[0] = val
                 val = tmpa
@@ -226,7 +237,6 @@ def syssamples_tocsv(_apikey, _uuid, _systemname, _keys, ts, te, ss)
               end
 
               hdrrow = CSVHeaders.create('complex', complex_syskeys[keystr], names, firstpass)
-              firstpass = false
               row_array[0].concat(hdrrow)
 
               missctr = 0
@@ -237,10 +247,11 @@ def syssamples_tocsv(_apikey, _uuid, _systemname, _keys, ts, te, ss)
               while arrayctr < bucketcnt
                 if firstpass
                   row_array[arrayctr + 1].concat([Time.at(buckets[arrayctr].to_i).getlocal])
+                  arrayctr + 1
                 end
                 ckeys.each do |ckey|
                   samples = inp_keyhash[ckey]
-                  val = samples[bucketoff[arrayctr]]
+                  val = samples[bucketoff[arrayctr].to_s]
 
                   if val.nil?
                     row_array[arrayctr + 1].concat([''] * numcats)
@@ -273,7 +284,7 @@ def syssamples_tocsv(_apikey, _uuid, _systemname, _keys, ts, te, ss)
               # first run through all time samples, and find max number of procs and
               # max number of uprocs
               while arrayctr < bucketcnt
-                samples = inp_keyhash[bucketoff[arrayctr]]
+                samples = inp_keyhash[bucketoff[arrayctr].to_s]
                 if samples != nil
                   newsamples = valid_json?(samples)
                   if newsamples != nil
@@ -394,7 +405,7 @@ def syssamples_tocsv(_apikey, _uuid, _systemname, _keys, ts, te, ss)
               end
             end
           else
-            if $debug == true
+            if $debug
               puts "DEBUG:  Unsupported key: "+keystr+"\n"
             end
           end
@@ -404,7 +415,7 @@ def syssamples_tocsv(_apikey, _uuid, _systemname, _keys, ts, te, ss)
         _systemname.gsub!('\\', '_')
 
         fname = "#{$output_path}/#{_systemname}.csv"
-        if $verbose == true
+        if $verbose
           puts "Writing to #{fname}\n\n"
         else
           print "."
@@ -430,7 +441,8 @@ abrv_to_key = {'h' => 'h',
                'l' => 'l',
                'm' => 'm',
                's' => 's',
-               'c' => 's_c',
+               'c' => 'c',
+               'c_d' => 's_c',
                'n' => 's_i',
                'f' => 's_f',
                'd' => 's_d',
@@ -447,9 +459,6 @@ if options != nil
                     options.start_min, options.start_sec)
   tend = Time.new(options.end_year, options.end_month, options.end_day, options.end_hour,
                   options.end_min, options.end_sec)
-  tstart_local = tstart
-  tend_local = tend
-  trun_local = trun
 
   ts = tstart.utc.to_i
   te = tend.utc.to_i
@@ -546,7 +555,7 @@ if options != nil
       end
       arrayindex = arrayindex + 1
     end
-    if $debug == true
+    if $debug
       puts "\n\nexecutions times : \n"
       ctr = 0
       while ctr < $timed_calls

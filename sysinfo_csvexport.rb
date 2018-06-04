@@ -76,7 +76,6 @@ def sysinfo_to_csv(allsystems)
 
       num_systems = allsystems.length
 
-      row0 = Array.new
       row0 = ['uuid', 'hidden', 'hostname',	'tags',	'OS',	'OS version',	'collector verison',
         'Create Date UTC', 'Last Update UTC', 'Created at',	'Last updated',	'health index',
         'summary state',	'uptime state',	'blocked state',	'load state',	'cpu state',
@@ -84,8 +83,6 @@ def sysinfo_to_csv(allsystems)
       csv << row0
 
       ctr = 0
-      sys = Hash.new
-      attr = Hash.new
       while ctr < num_systems
         row0.clear
         sys = allsystems[ctr]
@@ -131,8 +128,6 @@ if options != nil
   trun = Time.new(tr.year,tr.month,tr.day,tr.hour,tr.min,tr.sec)
 
   puts  "Time and Date of this data export: #{trun}\n"
-  numberlive = 0
-  allsystems = Array.new
   allsystems = GetSystems.all($APIKEY)
 
   if allsystems != nil
