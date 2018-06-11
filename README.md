@@ -26,30 +26,6 @@ All development and testing to date has been done with ruby-1.9.3.
 * [Uptime Cloud Monitor API](http://dev.copperegg.com/)
 * [typhoeus/ethon](https://github.com/typhoeus/ethon)
 
-## Recent Updates
-
-* version 1.2.2 released 10-31-2017
-  - For server, default metric is only health when no metric is specified.
-  - Fixed a bug with with 'last12m' interval - This filter wasn't working earlier.
-  - Fixed a bug with exporting a server data whose name was nil. The name of the file for such a server would be <uuid>.csv.
-
-* version 1.2.1 released 12-31-2015
-  - added issue_csvexport.rb which fetches issues based on provided parameters
-  - at most 200 issues can be fetched in one API call, even if you give a value > 200, it will get 200 only.
-
-* version 1.2.0 released 4-21-2014
-  - no longer assume that the data returned starts with the time and date requested for system or probe data.
-
-* version 1.1.1 released 2-2-2014
-  - added retries to HTTP GET requests in api.rb
-
-* version 1.1.0 released 3-25-2013
-  - added more time interval options
-  - changed interface to local time
-  - added support for selecting systems or probes by tag
-  - added support for exporting processes
-  - all metrics from a system or probe are exported to a single CSV
-  - generally improved stability.
 
 ## Installation
 
