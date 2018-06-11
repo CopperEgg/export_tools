@@ -86,7 +86,7 @@ def probeinfo_to_csv(allprobes)
       row0 = Array.new
       row0 = ['id', 'status', 'description',	'url', 'tags', 'type', 'data', 'check contents',
               'content match', 'interval', 'Probe created UTC',	'Probe last updated UTC',
-              'Probe created (epoch)',	'Probe last updated (epoh)', 'stations', 'timeout (ms)', 'retries']
+              'Probe created (epoch)',	'Probe last updated (epoch)', 'stations', 'timeout (ms)', 'retries']
       csv << row0
 
       ctr = 0

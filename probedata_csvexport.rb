@@ -26,11 +26,11 @@ $timed_calls = 0
 
 def probedata_to_csv(row_array, probename)
   begin
-    if $outpath_setup == false
+    unless $outpath_setup
       $outpath_setup = true
       if $output_path != '.'
-        if Dir.exists?("#{$output_path}/") == false
-          if $verbose == true
+        if !Dir.exists?("#{$output_path}/")
+          if $verbose
             print 'Creating directory...'
             if Dir.mkdir("#{$output_path}/", 0775) == -1
               print "** FAILED ***\n"
@@ -57,7 +57,7 @@ def probedata_to_csv(row_array, probename)
     probename.gsub!('\\', '_')
     probename.gsub!(':', '_')
     fname = "#{$output_path}/#{probename}.csv"
-    if $verbose == true
+    if $verbose
       puts "Writing to #{fname}\n\n"
     end
 
@@ -91,7 +91,7 @@ def parse_probe_samples(_apikey, _id, _probename, _stations, _keys, ts, te, ss)
                        's_l' => 4
                       }
 
-    if $debug == true
+    if $debug
       puts "DEBUG:  parse_probe_samples: #{_probename}\n"
     end
     start = Time.now
@@ -102,7 +102,7 @@ def parse_probe_samples(_apikey, _id, _probename, _stations, _keys, ts, te, ss)
     row_array = Array.new
     firstpass = true
     if probe_samplehash.nil?
-      if $verbose == true
+      if $verbose
         puts "\nSkipping probe #{_probename}\n"
       end
       return nil
@@ -114,16 +114,15 @@ def parse_probe_samples(_apikey, _id, _probename, _stations, _keys, ts, te, ss)
 
     inp_stations = Array.new
     inp_stations = _stations
-    total_station_cnt = inp_stations.length
 
     samplehash = probe_samplehash[0]
-    if $debug == true
+    if $debug
       puts "Samplehash for probe #{_probename}\n"
       p samplehash
       print "\n"
     end
     if samplehash.nil?
-      if $debug == true
+      if $debug
         puts "Samplehash is nil; skipping probe #{_probename}\n"
       end
       return nil
@@ -132,16 +131,16 @@ def parse_probe_samples(_apikey, _id, _probename, _stations, _keys, ts, te, ss)
     sample_time = samplehash['_bs']
 
     if (base_time.nil?) || (sample_time.nil?)
-      if $debug == true
+      if $debug
         puts "_ts or _bs was nil. Skipping probe #{_probename}\n"
       end
       return nil
     end
 
-    if $verbose == true
+    if $verbose
       puts "Probe data actual start date #{Time.at(base_time).getlocal}; Actual sample size #{sample_time}\n"
     end
-    if $debug == true
+    if $debug
       puts "DEBUG: building buckets\n"
     end
 
@@ -171,19 +170,19 @@ def parse_probe_samples(_apikey, _id, _probename, _stations, _keys, ts, te, ss)
     station_hash = Hash.new
 
     keys_array.each do |keystr|
-      if $debug == true
+      if $debug
         puts "\nDEBUG: beginning key #{keystr}\n"
       end
 
       metric_hash = samplehash[keystr]
       if metric_hash.nil?
-        if $debug == true
+        if $debug
           puts "\nDEBUG: nil metric_hash for metric key #{keystr}\n"
         end
         return nil
       end
-      if metric_hash.empty? == false
-        if $debug == true
+      unless metric_hash.empty?
+        if $debug
           puts "metric_hash for key #{keystr}\n"
           p metric_hash
           print "\n"
@@ -194,14 +193,14 @@ def parse_probe_samples(_apikey, _id, _probename, _stations, _keys, ts, te, ss)
         # Loop through all monitoring stations
         inp_stations.each do |station|
           station_hash = metric_hash[station]
-          if $debug == true
+          if $debug
             puts "\nDEBUG: beginning station #{station}\n"
             puts "\nDEBUG: station_hash station #{station}, key #{keystr}\n"
             p station_hash
             print "\n"
           end
           if station_hash.nil?
-            if $debug == true
+            if $debug
               puts "\nDEBUG: nil station_hash #{station}\n"
             end
             return nil
@@ -209,13 +208,12 @@ def parse_probe_samples(_apikey, _id, _probename, _stations, _keys, ts, te, ss)
 
           missctr = 0
           arrayctr = 0
-          lastsample = 0
           firstsample = -1
           numcats = complex_numcats[keystr]
 
           # step through the expected offsets
           while arrayctr < bucketcnt
-            if firstpass == true
+            if firstpass
               row_array[arrayctr+1].concat([Time.at(buckets[arrayctr].to_i).getlocal])
             end
 
@@ -224,14 +222,14 @@ def parse_probe_samples(_apikey, _id, _probename, _stations, _keys, ts, te, ss)
               if numcats == 1 || numcats == 4
                 row_array[arrayctr + 1].concat([''] * numcats)
               else
-                if $debug == true
+                if $debug
                   puts "\nDEBUG: numcats not 1 or 4\n"
                 end
                 return nil
               end
               missctr = missctr + 1
             else
-              if val.is_a?(Array)
+              unless val.is_a?(Array)
                 tmpa = Array.new
                 tmpa[0] = val
                 val = tmpa
@@ -241,7 +239,6 @@ def parse_probe_samples(_apikey, _id, _probename, _stations, _keys, ts, te, ss)
               if firstsample == -1
                 firstsample = arrayctr
               end
-              lastsample = arrayctr
             end
             arrayctr = arrayctr + 1
           end
@@ -250,7 +247,7 @@ def parse_probe_samples(_apikey, _id, _probename, _stations, _keys, ts, te, ss)
       end
     end
 
-    if $debug == true
+    if $debug
       puts "header :\n"
       p row_array[0]
       puts "\n"
@@ -271,10 +268,6 @@ if options != nil
     options.start_hour, options.start_min, options.start_sec)
   tend = Time.new(options.end_year, options.end_month, options.end_day,
     options.end_hour, options.end_min, options.end_sec)
-
-  tstart_local =  tstart
-  tend_local = tend
-  trun_local = trun
 
   ts = tstart.utc.to_i
   te = tend.utc.to_i
@@ -307,8 +300,6 @@ if options != nil
     puts "Sample size override is #{options.sample_size_override}\n"
   end
 
-  allprobes = Array.new
-  filteredprobes = Array.new
   allprobes = GetProbes.all($APIKEY)
   if allprobes.nil? || allprobes == []
     puts "\nNo probes found.\n"
@@ -329,29 +320,27 @@ if options != nil
     filteredprobes = allprobes
   end
 
-  row_array = Array.new
-
   if filteredprobes != nil
     numberlive = filteredprobes.length
     arrayindex = 0
     while arrayindex < numberlive
       this_probe = filteredprobes[arrayindex]
-      if $verbose == false
+      if $verbose
         print "."
       end
       row_array =  parse_probe_samples($APIKEY, this_probe['id'], this_probe['probe_desc'],
         this_probe['stations'], keys, ts, te, ss)
-      if row_array != nil && row_array.empty? == false
+      if row_array != nil && !row_array.empty?
         puts "[#{arrayindex + 1}/#{numberlive}] Name : #{this_probe['probe_desc']}\n"
         tmpresult = probedata_to_csv(row_array, this_probe['probe_desc'])
       else
-        if $debug == true
+        if $debug
           puts "\n\nDEBUG: parse_probe_samples retuned nil! #{this_probe['probe_desc']}\n"
         end
       end
       arrayindex = arrayindex + 1
     end
-    if $debug == true
+    if $debug
       puts "\n\nexecutions times : \n"
       ctr = 0
       while ctr < $timed_calls

@@ -40,57 +40,68 @@ def syssamples_tocsv(_apikey, _uuid, _systemname, _keys, ts, te, ss)
   _systemname = _uuid if _systemname.nil?
 
   begin
-    simple_syskeys = {'h' => ['health index', 'health state', 'uptime state', 'blocked state',
-                              'load state', 'cpu state', 'memory state', 'state on last update',
-                               'filesystem health index',  'filesystem state'],
-                      'r' => ['running procs'],
-                      'b' => ['blocked procs'],
-                      'l' => ['system load'],
-                      'm' => ['buffer memory MB', 'cache memory MB',  'free memory MB', 'used memory MB'],
-                      's' => ['swap used MB', 'swap free MB']
-                     }
-    complex_syskeys = {'s_c' => ['active', 'iowait','user', 'nice', 'system', 'irq', 'softirq', 'steal', 'guest'],
-                       's_i' => ['rx KB/s average', 'tx KB/s average'],
-                       's_f' => ['used Gbytes', 'free Gbytes'],
-                       's_d' => ['reads  KB/s', 'writes  KB/s']
-                      }
+    simple_syskeys = {
+        'h' => ['health index', 'health state', 'uptime state', 'blocked state', 'load state', 'cpu state',
+                'memory state', 'state on last update', 'filesystem health index', 'filesystem state'],
+        'r' => ['running procs'],
+        'b' => ['blocked procs'],
+        'l' => ['system load'],
+        'm' => ['buffer memory MB', 'cache memory MB', 'free memory MB', 'used memory MB'],
+        's' => ['swap used MB', 'swap free MB'],
+        'c' => ['active', 'iowait', 'user', 'nice', 'system', 'irq', 'softirq', 'steal', 'guest']
+    }
 
-    proc_syskeys    = {'p'   => ['name','cmd line','PID','UID','state','CPU % User',	'CPU % System',
-                                 'CPU % Total', 'internal', 	'Memory Virtual', 'Memory Resident', 	'internal'],
-                       'u'   =>	['User UID',	'CPU % User',	'CPU % System', 'CPU % Total', 'internal use',
-                                 'Memory Virtual', 'Memory Resident',	'Internal Use']
-                      }
+    complex_syskeys = {
+        's_c' => ['active', 'iowait', 'user', 'nice', 'system', 'irq', 'softirq', 'steal', 'guest'],
+        's_i' => ['rx KB/s average', 'tx KB/s average'],
+        's_f' => ['used Gbytes', 'free Gbytes'],
+        's_d' => ['reads  KB/s', 'writes  KB/s']
+    }
 
-    simple_numcats =  {'h' => 10,
-                      'r' => 1,
-                      'b' => 1,
-                      'l' => 1,
-                      'm' => 4,
-                      's' => 2
-                      }
-    complex_numcats = {'s_c' => 9,
-                       's_i' => 2,
-                       's_f' => 2,
-                       's_d' => 2
-                      }
+    proc_syskeys = {
+        'p' => ['name', 'cmd line', 'PID', 'UID', 'state', 'CPU % User', 'CPU % System',
+                'CPU % Total', 'internal', 'Memory Virtual', 'Memory Resident', 'internal'],
+        'u' => ['User UID', 'CPU % User', 'CPU % System', 'CPU % Total', 'internal use',
+                'Memory Virtual', 'Memory Resident', 'Internal Use']
+    }
 
-    proc_numcats    = {'p'  => 12,
-                       'u'  => 8
-                      }
+    simple_numcats = {
+        'h' => 10,
+        'r' => 1,
+        'b' => 1,
+        'l' => 1,
+        'm' => 4,
+        's' => 2,
+        'c' => 9
+    }
 
+    complex_numcats = {
+        's_c' => 9,
+        's_i' => 2,
+        's_f' => 2,
+        's_d' => 2
+    }
 
-    keysto_strings =  { 'h'   => 'health',
-                        'r'   => 'run-procs',
-                        'b'   => 'block-procs',
-                        'l'   => 'sys-load',
-                        'm'   => 'memory',
-                        's'   => 'swap',
-                        's_c' => 'cpu',
-                        's_i' => 'net',
-                        's_f' => 'filesys',
-                        's_d' => 'diskio',
-                        'p'   => 'procs'
-                      }
+    proc_numcats = {
+        'p' => 12,
+        'u' => 8
+    }
+
+    keysto_strings = {
+        'h' => 'health',
+        'r' => 'run-procs',
+        'b' => 'block-procs',
+        'l' => 'sys-load',
+        'm' => 'memory',
+        's' => 'swap',
+        'c' => 'cpu',
+        's_c' => 'cpu',
+        's_i' => 'net',
+        's_f' => 'filesys',
+        's_d' => 'diskio',
+        'p' => 'procs'
+    }
+
     row_array = Array.new
     firstpass = true
 
@@ -117,11 +128,11 @@ def syssamples_tocsv(_apikey, _uuid, _systemname, _keys, ts, te, ss)
           end
         else
           FileUtils.chmod(0775, "#{$output_path}/")
-       end
+        end
       end
     end
     start = Time.now
-    systemdata = GetSystemSamples.uuid( _apikey, _uuid, _keys, ts, te, ss)
+    systemdata = GetSystemSamples.uuid(_apikey, _uuid, _keys, ts, te, ss)
     $times[$timed_calls] = Time.now - start
     $timed_calls += 1
 
@@ -135,7 +146,7 @@ def syssamples_tocsv(_apikey, _uuid, _systemname, _keys, ts, te, ss)
       onesystem = Hash.new
       onesystem = systemdata[0]
 
-     if (onesystem['_ts'].nil?) || (onesystem['_bs'].nil?)
+      if (onesystem['_ts'].nil?) || (onesystem['_bs'].nil?)
         if $debug == true
           puts "_ts or _bs was nil. Skipping this system\n"
         end
@@ -164,7 +175,7 @@ def syssamples_tocsv(_apikey, _uuid, _systemname, _keys, ts, te, ss)
         end
 
         ctr = 0
-        while ctr <=  bucketcnt
+        while ctr <= bucketcnt
           row_array[ctr] = Array.new
           ctr += 1
         end
@@ -187,12 +198,12 @@ def syssamples_tocsv(_apikey, _uuid, _systemname, _keys, ts, te, ss)
             firstsample = -1
 
             while arrayctr < bucketcnt
-              if firstpass == true
+              if firstpass
                 row_array[arrayctr + 1].concat([Time.at(buckets[arrayctr].to_i).getlocal])
               end
 
               val = samples[bucketoff[arrayctr].to_s]
-              if val.is_a?(Array) != true
+              unless val.is_a?(Array)
                 tmpa = Array.new
                 tmpa[0] = val
                 val = tmpa
@@ -210,6 +221,7 @@ def syssamples_tocsv(_apikey, _uuid, _systemname, _keys, ts, te, ss)
               end
               arrayctr = arrayctr + 1
             end
+            firstpass = false
 
           elsif complex_syskeys.has_key?(keystr)
             numcats = complex_numcats[keystr]
@@ -233,18 +245,19 @@ def syssamples_tocsv(_apikey, _uuid, _systemname, _keys, ts, te, ss)
               firstsample = -1
 
               while arrayctr < bucketcnt
-                if firstpass == true
+                if firstpass
                   row_array[arrayctr + 1].concat([Time.at(buckets[arrayctr].to_i).getlocal])
+                  arrayctr + 1
                 end
                 ckeys.each do |ckey|
                   samples = inp_keyhash[ckey]
-                  val = samples[bucketoff[arrayctr]]
+                  val = samples[bucketoff[arrayctr].to_s]
 
                   if val.nil?
                     row_array[arrayctr + 1].concat([''] * numcats)
                     missctr = missctr + 1
                   else
-                     row_array[arrayctr+1].concat(val)
+                    row_array[arrayctr+1].concat(val)
                     if firstsample == -1
                       firstsample = arrayctr
                     end
@@ -253,6 +266,7 @@ def syssamples_tocsv(_apikey, _uuid, _systemname, _keys, ts, te, ss)
                 end
                 arrayctr = arrayctr + 1
               end
+              firstpass = false
             end
           elsif keystr == 'p'
             if inp_keyhash != nil
@@ -270,7 +284,7 @@ def syssamples_tocsv(_apikey, _uuid, _systemname, _keys, ts, te, ss)
               # first run through all time samples, and find max number of procs and
               # max number of uprocs
               while arrayctr < bucketcnt
-                samples = inp_keyhash[bucketoff[arrayctr]]
+                samples = inp_keyhash[bucketoff[arrayctr].to_s]
                 if samples != nil
                   newsamples = valid_json?(samples)
                   if newsamples != nil
@@ -298,9 +312,9 @@ def syssamples_tocsv(_apikey, _uuid, _systemname, _keys, ts, te, ss)
               num_pprocs = 0
               num_uprocs = 0
 
-               # step through the exp  ected offsets
+              # step through the expected offsets
               while arrayctr < bucketcnt
-                if firstpass == true
+                if firstpass
                   row_array[arrayctr + 1].concat([Time.at(buckets[arrayctr].to_i).getlocal])
                 end
 
@@ -391,18 +405,17 @@ def syssamples_tocsv(_apikey, _uuid, _systemname, _keys, ts, te, ss)
               end
             end
           else
-            if $debug == true
+            if $debug
               puts "DEBUG:  Unsupported key: "+keystr+"\n"
             end
           end
-          firstpass = false
         end
 
-        _systemname.gsub!('/','_')
-        _systemname.gsub!('\\','_')
+        _systemname.gsub!('/', '_')
+        _systemname.gsub!('\\', '_')
 
-       fname = "#{$output_path}/#{_systemname}.csv"
-        if $verbose == true
+        fname = "#{$output_path}/#{_systemname}.csv"
+        if $verbose
           puts "Writing to #{fname}\n\n"
         else
           print "."
@@ -422,17 +435,18 @@ def syssamples_tocsv(_apikey, _uuid, _systemname, _keys, ts, te, ss)
 end
 
 
-abrv_to_key = { 'h'   => 'h',
-  'r'   => 'r',
-  'b'   => 'b',
-  'l'   => 'l',
-  'm'   => 'm',
-  's'   => 's',
-  'c'   => 's_c',
-  'n'   => 's_i',
-  'f'   => 's_f',
-  'd'   => 's_d',
-  'p'   => 'p'
+abrv_to_key = {'h' => 'h',
+               'r' => 'r',
+               'b' => 'b',
+               'l' => 'l',
+               'm' => 'm',
+               's' => 's',
+               'c' => 'c',
+               'c_d' => 's_c',
+               'n' => 's_i',
+               'f' => 's_f',
+               'd' => 's_d',
+               'p' => 'p'
 }
 
 options = ExportOptions.parse(ARGV, 'Usage: sysdata_csvexport.rb APIKEY [options]', 'sysdata')
@@ -444,10 +458,7 @@ if options != nil
   tstart = Time.new(options.start_year, options.start_month, options.start_day, options.start_hour,
                     options.start_min, options.start_sec)
   tend = Time.new(options.end_year, options.end_month, options.end_day, options.end_hour,
-                    options.end_min, options.end_sec)
-  tstart_local =  tstart
-  tend_local = tend
-  trun_local = trun
+                  options.end_min, options.end_sec)
 
   ts = tstart.utc.to_i
   te = tend.utc.to_i
@@ -470,15 +481,15 @@ if options != nil
   $times = Array.new
   $timed_calls = 0
 
-  puts  "Time and Date of this data export: #{trun} \n\n"
-  puts  "Requesting data from #{tstart.getlocal} to #{tend.getlocal} local time\n"
-  puts  "Requesting data from #{tstart.utc} to #{tend.utc}\n"
-  puts  "Selected keys #{keys}\n"
+  puts "Time and Date of this data export: #{trun} \n\n"
+  puts "Requesting data from #{tstart.getlocal} to #{tend.getlocal} local time\n"
+  puts "Requesting data from #{tstart.utc} to #{tend.utc}\n"
+  puts "Selected keys #{keys}\n"
   if ss == 0
     puts "Using default sample size\n"
   else
     puts "Sample size override is #{options.sample_size_override}\n"
- end
+  end
 
   numberlive = 0
   livesystems = Array.new
@@ -486,7 +497,7 @@ if options != nil
 
   if options.tag != ''
 
-    puts  "Requesting systems with tag #{options.tag}\n"
+    puts "Requesting systems with tag #{options.tag}\n"
     livesystems = GetSystems.all($APIKEY)
     if livesystems.nil? || livesystems.empty?
       puts "\nNo systems found.\n"
@@ -498,19 +509,19 @@ if options != nil
       exit
     end
   elsif options.monitor != ''
-    puts  "Requesting system with UUID #{options.monitor}\n"
+    puts "Requesting system with UUID #{options.monitor}\n"
     livesystems = GetSystems.all($APIKEY)
     if livesystems.nil?
       puts "GetSystems returned nil\n"
       exit
     end
-    filteredsystems = systemsfilter_byuuid(livesystems,options.monitor)
+    filteredsystems = systemsfilter_byuuid(livesystems, options.monitor)
     if filteredsystems.nil? || filteredsystems.empty?
       puts "\nSystem with UUID #{options.monitor} not found.\n"
       exit
     end
   else
-    puts  "Requesting all systems\n"
+    puts "Requesting all systems\n"
     livesystems = GetSystems.all($APIKEY)
     if livesystems.nil? || livesystems.empty?
       puts "\nNo systems found.\n"
@@ -535,7 +546,7 @@ if options != nil
               hostname = hostname+"-"+uuid
             end
             puts "[#{arrayindex + 1}/#{numberlive}] uuid is #{uuid}\n"
-            tmpresult = syssamples_tocsv($APIKEY, uuid, attrs["n"],keys, ts, te, ss)
+            tmpresult = syssamples_tocsv($APIKEY, uuid, attrs["n"], keys, ts, te, ss)
             if tmpresult == false
               exit
             end
@@ -544,7 +555,7 @@ if options != nil
       end
       arrayindex = arrayindex + 1
     end
-    if $debug == true
+    if $debug
       puts "\n\nexecutions times : \n"
       ctr = 0
       while ctr < $timed_calls
